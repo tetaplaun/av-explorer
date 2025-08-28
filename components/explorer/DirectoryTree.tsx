@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FileItem } from "@/types/explorer"
@@ -23,6 +23,8 @@ interface TreeNode {
 export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: DirectoryTreeProps) {
   const [treeData, setTreeData] = useState<TreeNode[]>([])
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  const selectedNodeRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (rootPath && rootPath.trim() !== "") {
@@ -36,6 +38,19 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
       expandToPath(selectedPath)
     }
   }, [selectedPath])
+
+  // Scroll to selected node when it changes
+  useEffect(() => {
+    if (selectedNodeRef.current && containerRef.current) {
+      // Small delay to ensure DOM is updated after expansion
+      setTimeout(() => {
+        selectedNodeRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+      }, 100)
+    }
+  }, [selectedPath, expandedPaths])
 
   const loadDirectory = async (path: string) => {
     try {
@@ -220,7 +235,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
     const isSelected = selectedPath === node.path
 
     return (
-      <div key={node.path}>
+      <div key={node.path} ref={isSelected ? selectedNodeRef : null}>
         <Button
           variant={isSelected ? "secondary" : "ghost"}
           className={cn("w-full justify-start px-2 py-1 h-auto", "hover:bg-muted")}
@@ -259,7 +274,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
   }
 
   return (
-    <div className="py-2">
+    <div className="py-2" ref={containerRef}>
       <h3 className="mb-2 px-4 text-xs font-semibold uppercase text-gray-400">Folders</h3>
       {treeData.map((node) => renderNode(node))}
     </div>

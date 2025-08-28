@@ -8,6 +8,14 @@ const isDev = process.env.NODE_ENV === 'development'
 
 let mainWindow
 
+// Drive cache to avoid repeated detection attempts
+let driveCache = {
+  drives: [],
+  timestamp: 0,
+  cacheTime: 30000, // Cache for 30 seconds
+  errorLogged: false // Track if we've logged an error this session
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -57,18 +65,85 @@ ipcMain.handle('app-info', () => {
 // File System Operations
 ipcMain.handle('get-drives', async () => {
   if (process.platform === 'win32') {
+    // Check cache first
+    const now = Date.now()
+    if (driveCache.drives.length > 0 && (now - driveCache.timestamp) < driveCache.cacheTime) {
+      return driveCache.drives
+    }
+
+    let drives = []
+    
+    // Method 1: Try fsutil (fastest and most reliable)
     try {
-      // Use PowerShell with no profile and a timeout for reliability
-      const psCmd = 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name=\'FreeSpace\';Expression={$_.Free}}, @{Name=\'TotalSize\';Expression={$_.Used + $_.Free}} | ConvertTo-Json"'
-      const { stdout } = await execPromise(psCmd, { timeout: 5000, windowsHide: true, maxBuffer: 5 * 1024 * 1024 })
-      const drivesData = JSON.parse(stdout)
-      const drives = []
+      const { stdout } = await execPromise('fsutil fsinfo drives', { 
+        timeout: 2000, 
+        windowsHide: true 
+      })
       
-      // Ensure drivesData is an array
+      // Parse output like "Drives: C:\ D:\ E:\"
+      const driveLetters = stdout.match(/[A-Z]:\\/g) || []
+      
+      for (const driveLetter of driveLetters) {
+        const letter = driveLetter[0]
+        
+        // Try to get drive info with wmic (faster than PowerShell)
+        let freeSpace = 0
+        let totalSize = 0
+        
+        try {
+          const wmicCmd = `wmic logicaldisk where caption="${letter}:" get size,freespace /value`
+          const { stdout: wmicOut } = await execPromise(wmicCmd, { 
+            timeout: 1000, 
+            windowsHide: true 
+          })
+          
+          const sizeMatch = wmicOut.match(/Size=(\d+)/)
+          const freeMatch = wmicOut.match(/FreeSpace=(\d+)/)
+          
+          if (sizeMatch) totalSize = parseInt(sizeMatch[1])
+          if (freeMatch) freeSpace = parseInt(freeMatch[1])
+        } catch {
+          // Size info failed, but drive still exists
+        }
+        
+        drives.push({
+          name: `${letter}:`,
+          path: `${letter}:\\`,
+          type: 'drive',
+          freeSpace,
+          totalSize
+        })
+      }
+      
+      // Cache successful result
+      driveCache.drives = drives
+      driveCache.timestamp = now
+      driveCache.errorLogged = false
+      
+      return drives
+    } catch (error) {
+      // fsutil failed, try next method
+      if (!driveCache.errorLogged && isDev) {
+        console.log('fsutil method failed, trying fallback methods')
+        driveCache.errorLogged = true
+      }
+    }
+    
+    // Method 2: Try PowerShell (if fsutil failed)
+    try {
+      const psCmd = 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name=\'FreeSpace\';Expression={$_.Free}}, @{Name=\'TotalSize\';Expression={$_.Used + $_.Free}} | ConvertTo-Json"'
+      const { stdout } = await execPromise(psCmd, { 
+        timeout: 3000, 
+        windowsHide: true, 
+        maxBuffer: 5 * 1024 * 1024 
+      })
+      
+      const drivesData = JSON.parse(stdout)
       const drivesList = Array.isArray(drivesData) ? drivesData : [drivesData]
       
+      drives = []
       for (const drive of drivesList) {
-        if (drive.Name && drive.Name.length === 1) { // Only single letter drives
+        if (drive.Name && drive.Name.length === 1) {
           drives.push({
             name: drive.Name + ':',
             path: drive.Name + ':\\',
@@ -79,31 +154,45 @@ ipcMain.handle('get-drives', async () => {
         }
       }
       
+      // Cache successful result
+      driveCache.drives = drives
+      driveCache.timestamp = now
+      driveCache.errorLogged = false
+      
       return drives
     } catch (error) {
-      console.error('Error getting drives (PowerShell path):', error && error.message ? error.message : error)
-      // Fallback: try to detect drives using fs.existsSync
-      const drives = []
-      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
-      
-      for (const letter of letters) {
-        const drivePath = `${letter}:\\`
-        try {
-          await fs.access(drivePath)
-          drives.push({
-            name: `${letter}:`,
-            path: drivePath,
-            type: 'drive',
-            freeSpace: 0,
-            totalSize: 0
-          })
-        } catch {
-          // Drive doesn't exist, skip
-        }
+      // PowerShell also failed
+      if (!driveCache.errorLogged && isDev) {
+        console.log('PowerShell method failed, using filesystem detection')
+        driveCache.errorLogged = true
       }
-      
-      return drives
     }
+    
+    // Method 3: Fallback to filesystem checking
+    drives = []
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+    
+    for (const letter of letters) {
+      const drivePath = `${letter}:\\`
+      try {
+        await fs.access(drivePath)
+        drives.push({
+          name: `${letter}:`,
+          path: drivePath,
+          type: 'drive',
+          freeSpace: 0,
+          totalSize: 0
+        })
+      } catch {
+        // Drive doesn't exist, skip
+      }
+    }
+    
+    // Cache the result even if it's from fallback
+    driveCache.drives = drives
+    driveCache.timestamp = now
+    
+    return drives
   } else {
     // For Unix-like systems, return root
     return [{
@@ -112,6 +201,16 @@ ipcMain.handle('get-drives', async () => {
       type: 'drive'
     }]
   }
+})
+
+// Add method to refresh drive cache
+ipcMain.handle('refresh-drives', async () => {
+  // Clear the cache to force refresh
+  driveCache.timestamp = 0
+  driveCache.drives = []
+  
+  // Now get fresh drive list
+  return await ipcMain._events['get-drives'][0]()
 })
 
 ipcMain.handle('read-directory', async (event, dirPath) => {
