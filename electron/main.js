@@ -241,6 +241,7 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
         isDirectory: entry.isDirectory(),
         size: stats ? stats.size : 0,
         modified: stats ? stats.mtime : null,
+        created: stats ? stats.birthtime : null,
         extension: entry.isDirectory() ? '' : path.extname(entry.name).toLowerCase()
       }
       

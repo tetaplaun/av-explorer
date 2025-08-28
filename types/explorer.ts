@@ -4,6 +4,7 @@ export interface FileItem {
   isDirectory: boolean
   size: number
   modified: Date | null
+  created: Date | null
   extension: string
   mediaType?: 'video' | 'audio' | 'image' | null
 }

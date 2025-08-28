@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { FileItem, ViewMode } from "@/types/explorer"
-import { getFileIcon, getFileIconColor, formatFileSize, formatDate, truncateFilename } from "@/lib/fileUtils"
+import { getFileIcon, getFileIconColor, formatFileSize, formatDate, formatDateTime, truncateFilename } from "@/lib/fileUtils"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -38,6 +38,10 @@ export function FilesList({
       setLoading(true)
       setError(null)
       const items = await window.electronAPI.fileSystem.readDirectory(path)
+      // Debug: Check if created dates are being received
+      if (items.length > 0) {
+        console.log("Sample file data:", items[0])
+      }
       setFiles(items)
     } catch (err) {
       console.error("Failed to load files:", err)
@@ -191,7 +195,8 @@ export function FilesList({
             <th className="px-4 py-2">Name</th>
             <th className="px-4 py-2">Type</th>
             <th className="px-4 py-2">Size</th>
-            <th className="px-4 py-2">Modified</th>
+            <th className="px-4 py-2">Date Created</th>
+            <th className="px-4 py-2">Date Modified</th>
           </tr>
         </thead>
         <tbody>
@@ -239,7 +244,10 @@ export function FilesList({
                   {file.isDirectory ? "-" : formatFileSize(file.size)}
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {formatDate(file.modified)}
+                  {formatDateTime(file.created)}
+                </td>
+                <td className="px-4 py-2 text-sm text-muted-foreground">
+                  {formatDateTime(file.modified)}
                 </td>
               </tr>
             )
