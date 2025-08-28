@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { DrivesList } from "@/components/explorer/DrivesList"
+import { DrivesBar } from "@/components/explorer/DrivesBar"
 import { DirectoryTree } from "@/components/explorer/DirectoryTree"
 import { FilesList } from "@/components/explorer/FilesList"
 import { Toolbar } from "@/components/explorer/Toolbar"
@@ -124,17 +123,15 @@ export default function Home() {
         canGoForward={historyIndex < history.length - 1}
       />
 
+      {/* Drives Bar (below toolbar) */}
+      <DrivesBar onDriveSelect={navigateToPath} selectedPath={currentPath} />
+
       {/* Main content */}
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Sidebar */}
         <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
           <div className="h-full bg-card">
             <ScrollArea className="h-full">
-              {/* Drives */}
-              <DrivesList onDriveSelect={navigateToPath} selectedPath={currentPath} />
-
-              <Separator className="my-2" />
-
               {/* Directory Tree */}
               {currentPath && currentPath.trim() !== "" && (
                 <DirectoryTree
