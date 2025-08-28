@@ -294,11 +294,8 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
         }
       }
       
-      // Get encoded date for all media files (including images)
+      // Encoded date will be loaded asynchronously to improve performance
       item.encodedDate = null
-      if (item.mediaType === 'video' || item.mediaType === 'audio' || item.mediaType === 'image') {
-        item.encodedDate = await getEncodedDate(fullPath)
-      }
       
       items.push(item)
     }
@@ -333,6 +330,35 @@ ipcMain.handle('get-path-info', async (event, filePath) => {
       error: error.message
     }
   }
+})
+
+// Get encoded dates for multiple files (async batch processing)
+ipcMain.handle('get-encoded-dates', async (event, fileItems) => {
+  const results = {}
+  
+  // Process files in parallel with a limit to avoid overwhelming the system
+  const batchSize = 10
+  for (let i = 0; i < fileItems.length; i += batchSize) {
+    const batch = fileItems.slice(i, i + batchSize)
+    const batchPromises = batch.map(async (item) => {
+      // Only process media files
+      if (item.mediaType === 'video' || item.mediaType === 'audio' || item.mediaType === 'image') {
+        try {
+          const encodedDate = await getEncodedDate(item.path)
+          if (encodedDate) {
+            results[item.path] = encodedDate
+          }
+        } catch (error) {
+          // Silently skip files that fail
+          console.log(`Failed to get encoded date for ${item.path}`)
+        }
+      }
+    })
+    
+    await Promise.all(batchPromises)
+  }
+  
+  return results
 })
 
 ipcMain.handle('open-file', async (event, filePath) => {

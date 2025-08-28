@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getDrives: () => ipcRenderer.invoke('get-drives'),
     readDirectory: (path) => ipcRenderer.invoke('read-directory', path),
     getPathInfo: (path) => ipcRenderer.invoke('get-path-info', path),
+    getEncodedDates: (fileItems) => ipcRenderer.invoke('get-encoded-dates', fileItems),
     openFile: (path) => ipcRenderer.invoke('open-file', path),
     showItemInFolder: (path) => ipcRenderer.invoke('show-item-in-folder', path)
   }

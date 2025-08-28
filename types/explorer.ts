@@ -48,6 +48,7 @@ declare global {
         getDrives: () => Promise<DriveInfo[]>
         readDirectory: (path: string) => Promise<FileItem[]>
         getPathInfo: (path: string) => Promise<PathInfo>
+        getEncodedDates: (fileItems: FileItem[]) => Promise<Record<string, Date>>
         openFile: (path: string) => Promise<{ success: boolean; error?: string }>
         showItemInFolder: (path: string) => Promise<{ success: boolean; error?: string }>
       }

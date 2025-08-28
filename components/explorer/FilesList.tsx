@@ -27,6 +27,7 @@ export function FilesList({
 }: FilesListProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingEncodedDates, setLoadingEncodedDates] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -38,16 +39,47 @@ export function FilesList({
       setLoading(true)
       setError(null)
       const items = await window.electronAPI.fileSystem.readDirectory(path)
-      // Debug: Check if created dates are being received
-      if (items.length > 0) {
-        console.log("Sample file data:", items[0])
-      }
       setFiles(items)
+      
+      // Load encoded dates asynchronously after displaying the table
+      loadEncodedDates(items)
     } catch (err) {
       console.error("Failed to load files:", err)
       setError("Failed to load directory")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadEncodedDates = async (items: FileItem[]) => {
+    // Only process media files
+    const mediaFiles = items.filter(item => 
+      item.mediaType === 'video' || 
+      item.mediaType === 'audio' || 
+      item.mediaType === 'image'
+    )
+    
+    if (mediaFiles.length === 0) return
+    
+    try {
+      setLoadingEncodedDates(true)
+      const encodedDates = await window.electronAPI.fileSystem.getEncodedDates(mediaFiles)
+      
+      // Update files with encoded dates
+      setFiles(prevFiles => 
+        prevFiles.map(file => {
+          const encodedDate = encodedDates[file.path]
+          if (encodedDate) {
+            return { ...file, encodedDate }
+          }
+          return file
+        })
+      )
+    } catch (err) {
+      console.error("Failed to load encoded dates:", err)
+      // Don't show error to user, just silently fail for encoded dates
+    } finally {
+      setLoadingEncodedDates(false)
     }
   }
 
@@ -251,7 +283,15 @@ export function FilesList({
                   {formatDateTime(file.modified)}
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {file.encodedDate ? formatDateTime(file.encodedDate) : '-'}
+                  {file.encodedDate ? (
+                    formatDateTime(file.encodedDate)
+                  ) : (
+                    loadingEncodedDates && (file.mediaType === 'video' || file.mediaType === 'audio' || file.mediaType === 'image') ? (
+                      <span className="text-xs">Loading...</span>
+                    ) : (
+                      '-'
+                    )
+                  )}
                 </td>
               </tr>
             )
