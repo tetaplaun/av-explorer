@@ -41,7 +41,8 @@ export function Toolbar({
   canGoBack,
   canGoForward
 }: ToolbarProps) {
-  const pathSegments = getPathSegments(currentPath)
+  // Only process path segments if we have a valid path
+  const pathSegments = currentPath ? getPathSegments(currentPath) : []
   const canGoUp = pathSegments.length > 1
 
   return (
@@ -54,7 +55,7 @@ export function Toolbar({
             size="icon"
             className="h-8 w-8"
             onClick={onBack}
-            disabled={!canGoBack}
+            disabled={!!(!canGoBack)}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -63,7 +64,7 @@ export function Toolbar({
             size="icon"
             className="h-8 w-8"
             onClick={onForward}
-            disabled={!canGoForward}
+            disabled={!!(!canGoForward)}
           >
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -72,7 +73,7 @@ export function Toolbar({
             size="icon"
             className="h-8 w-8"
             onClick={onUp}
-            disabled={!canGoUp}
+            disabled={!!(!canGoUp)}
           >
             <ArrowUp className="h-4 w-4" />
           </Button>
@@ -82,26 +83,30 @@ export function Toolbar({
 
         {/* Path breadcrumbs */}
         <div className="flex flex-1 items-center gap-1 overflow-x-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onNavigate(pathSegments[0].path)}
-          >
-            <Home className="h-4 w-4" />
-          </Button>
-          {pathSegments.map((segment, index) => (
-            <div key={segment.path} className="flex items-center">
-              {index > 0 && <span className="mx-1 text-gray-500">/</span>}
+          {pathSegments.length > 0 && (
+            <>
               <Button
                 variant="ghost"
-                className="h-8 px-2 py-1 text-sm"
-                onClick={() => onNavigate(segment.path)}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onNavigate(pathSegments[0].path)}
               >
-                {segment.name}
+                <Home className="h-4 w-4" />
               </Button>
-            </div>
-          ))}
+              {pathSegments.map((segment, index) => (
+                <div key={segment.path} className="flex items-center">
+                  {index > 0 && <span className="mx-1 text-gray-500">/</span>}
+                  <Button
+                    variant="ghost"
+                    className="h-8 px-2 py-1 text-sm"
+                    onClick={() => onNavigate(segment.path)}
+                  >
+                    {segment.name}
+                  </Button>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         <Separator orientation="vertical" className="h-6" />

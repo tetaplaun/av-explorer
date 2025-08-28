@@ -58,30 +58,50 @@ ipcMain.handle('app-info', () => {
 ipcMain.handle('get-drives', async () => {
   if (process.platform === 'win32') {
     try {
-      const { stdout } = await execPromise('wmic logicaldisk get size,freespace,caption')
-      const lines = stdout.trim().split('\n').slice(1)
+      // Use PowerShell instead of deprecated wmic command
+      const { stdout } = await execPromise('powershell -Command "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name=\'FreeSpace\';Expression={$_.Free}}, @{Name=\'TotalSize\';Expression={$_.Used + $_.Free}} | ConvertTo-Json"')
+      const drivesData = JSON.parse(stdout)
       const drives = []
       
-      for (const line of lines) {
-        const parts = line.trim().split(/\s+/)
-        if (parts[0]) {
-          const driveLetter = parts[0]
-          const freeSpace = parts[1] ? parseInt(parts[1]) : 0
-          const totalSize = parts[2] ? parseInt(parts[2]) : 0
-          
+      // Ensure drivesData is an array
+      const drivesList = Array.isArray(drivesData) ? drivesData : [drivesData]
+      
+      for (const drive of drivesList) {
+        if (drive.Name && drive.Name.length === 1) { // Only single letter drives
           drives.push({
-            name: driveLetter,
-            path: driveLetter + '\\',
+            name: drive.Name + ':',
+            path: drive.Name + ':\\',
             type: 'drive',
-            freeSpace,
-            totalSize
+            freeSpace: drive.FreeSpace || 0,
+            totalSize: drive.TotalSize || 0
           })
         }
       }
+      
       return drives
     } catch (error) {
       console.error('Error getting drives:', error)
-      return []
+      // Fallback: try to detect drives using fs.existsSync
+      const drives = []
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+      
+      for (const letter of letters) {
+        const drivePath = `${letter}:\\`
+        try {
+          await fs.access(drivePath)
+          drives.push({
+            name: `${letter}:`,
+            path: drivePath,
+            type: 'drive',
+            freeSpace: 0,
+            totalSize: 0
+          })
+        } catch {
+          // Drive doesn't exist, skip
+        }
+      }
+      
+      return drives
     }
   } else {
     // For Unix-like systems, return root
@@ -95,6 +115,12 @@ ipcMain.handle('get-drives', async () => {
 
 ipcMain.handle('read-directory', async (event, dirPath) => {
   try {
+    // Validate the directory path
+    if (!dirPath || dirPath.trim() === '') {
+      console.error('Invalid directory path: empty or null')
+      return []
+    }
+    
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
     const items = []
     

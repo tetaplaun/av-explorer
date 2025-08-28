@@ -12,7 +12,7 @@ import { StatusBar } from '@/components/explorer/StatusBar'
 import { FileItem, ViewMode } from '@/types/explorer'
 
 export default function Home() {
-  const [currentPath, setCurrentPath] = useState<string>('C:\\')
+  const [currentPath, setCurrentPath] = useState<string>('')
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [history, setHistory] = useState<string[]>([])
@@ -45,6 +45,12 @@ export default function Home() {
 
   const loadFiles = async () => {
     try {
+      // Don't attempt to load if path is empty
+      if (!currentPath || currentPath.trim() === '') {
+        setFiles([])
+        return
+      }
+      
       const items = await window.electronAPI.fileSystem.readDirectory(currentPath)
       setFiles(items)
     } catch (error) {
@@ -89,7 +95,9 @@ export default function Home() {
     const segments = currentPath.split(/[\\/]/).filter(Boolean)
     if (segments.length > 1) {
       segments.pop()
-      const parentPath = process.platform === 'win32' 
+      // Detect Windows path by checking for drive letter pattern
+      const isWindowsPath = segments.length > 0 && /^[A-Za-z]:?$/.test(segments[0])
+      const parentPath = isWindowsPath
         ? segments.join('\\') + (segments.length === 1 ? '\\' : '')
         : '/' + segments.join('/')
       navigateToPath(parentPath)
@@ -133,7 +141,12 @@ export default function Home() {
               {/* Directory Tree */}
               {currentPath && (
                 <DirectoryTree
-                  rootPath={currentPath.split(/[\\/]/)[0] + (process.platform === 'win32' ? '\\' : '/')}
+                  rootPath={(() => {
+                    const firstSegment = currentPath.split(/[\\/]/)[0]
+                    // Check if it's a Windows drive letter
+                    const isWindowsPath = /^[A-Za-z]:?$/.test(firstSegment)
+                    return firstSegment + (isWindowsPath ? '\\' : '/')
+                  })()}
                   selectedPath={currentPath}
                   onPathSelect={navigateToPath}
                 />

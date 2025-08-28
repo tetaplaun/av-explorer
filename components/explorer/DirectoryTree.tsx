@@ -124,8 +124,8 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
             }
           }}
         >
-          <button
-            className="mr-1 p-0.5 hover:bg-gray-600 rounded"
+          <div
+            className="mr-1 p-0.5 hover:bg-gray-600 rounded cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
               toggleExpand(node)
@@ -136,7 +136,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
             ) : (
               <ChevronRight className="h-3 w-3" />
             )}
-          </button>
+          </div>
           {isExpanded ? (
             <FolderOpen className="mr-2 h-4 w-4 text-yellow-600" />
           ) : (

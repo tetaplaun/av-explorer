@@ -70,11 +70,14 @@ export function getPathSegments(path: string): { name: string; path: string }[] 
   const segments = []
   const parts = path.split(/[\\/]/).filter(Boolean)
   
-  if (process.platform === 'win32' && parts.length > 0) {
+  // Detect Windows path by checking for drive letter pattern (e.g., C:, D:)
+  const isWindowsPath = parts.length > 0 && /^[A-Za-z]:?$/.test(parts[0])
+  
+  if (isWindowsPath) {
     // Handle Windows drive letters
     segments.push({
-      name: parts[0],
-      path: parts[0] + '\\'
+      name: parts[0].replace(':', ''),
+      path: parts[0] + (parts[0].includes(':') ? '\\' : ':\\')
     })
     
     for (let i = 1; i < parts.length; i++) {
