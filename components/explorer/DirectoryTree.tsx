@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { ChevronRight, ChevronDown, Folder, FolderOpen } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { FileItem } from '@/types/explorer'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from "react"
+import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { FileItem } from "@/types/explorer"
+import { cn } from "@/lib/utils"
 
 interface DirectoryTreeProps {
   rootPath: string
@@ -25,30 +25,30 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (rootPath && rootPath.trim() !== '') {
+    if (rootPath && rootPath.trim() !== "") {
       loadDirectory(rootPath)
     }
   }, [rootPath])
 
   const loadDirectory = async (path: string) => {
     try {
-      if (!path || path.trim() === '') {
+      if (!path || path.trim() === "") {
         setTreeData([])
         return
       }
       const items = await window.electronAPI.fileSystem.readDirectory(path)
       const directories = items
-        .filter(item => item.isDirectory)
-        .map(dir => ({
+        .filter((item) => item.isDirectory)
+        .map((dir) => ({
           path: dir.path,
           name: dir.name,
           isExpanded: expandedPaths.has(dir.path),
           isLoading: false,
-          children: expandedPaths.has(dir.path) ? [] : undefined
+          children: expandedPaths.has(dir.path) ? [] : undefined,
         }))
-      
+
       setTreeData(directories)
-      
+
       // Load children for expanded directories
       for (const dir of directories) {
         if (expandedPaths.has(dir.path)) {
@@ -56,7 +56,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
         }
       }
     } catch (error) {
-      console.error('Failed to load directory:', error)
+      console.error("Failed to load directory:", error)
     }
   }
 
@@ -64,25 +64,25 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
     try {
       const items = await window.electronAPI.fileSystem.readDirectory(path)
       const directories = items
-        .filter(item => item.isDirectory)
-        .map(dir => ({
+        .filter((item) => item.isDirectory)
+        .map((dir) => ({
           path: dir.path,
           name: dir.name,
           isExpanded: expandedPaths.has(dir.path),
           isLoading: false,
-          children: expandedPaths.has(dir.path) ? [] : undefined
+          children: expandedPaths.has(dir.path) ? [] : undefined,
         }))
-      
+
       updateNodeChildren(path, directories)
     } catch (error) {
-      console.error('Failed to load children:', error)
+      console.error("Failed to load children:", error)
     }
   }
 
   const updateNodeChildren = (path: string, children: TreeNode[]) => {
-    setTreeData(prevData => {
+    setTreeData((prevData) => {
       const updateNode = (nodes: TreeNode[]): TreeNode[] => {
-        return nodes.map(node => {
+        return nodes.map((node) => {
           if (node.path === path) {
             return { ...node, children, isLoading: false }
           }
@@ -98,7 +98,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
 
   const toggleExpand = async (node: TreeNode) => {
     const newExpanded = new Set(expandedPaths)
-    
+
     if (expandedPaths.has(node.path)) {
       newExpanded.delete(node.path)
     } else {
@@ -107,22 +107,19 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
         await loadChildren(node.path)
       }
     }
-    
+
     setExpandedPaths(newExpanded)
   }
 
   const renderNode = (node: TreeNode, level: number = 0) => {
     const isExpanded = expandedPaths.has(node.path)
     const isSelected = selectedPath === node.path
-    
+
     return (
       <div key={node.path}>
         <Button
           variant={isSelected ? "secondary" : "ghost"}
-          className={cn(
-            "w-full justify-start px-2 py-1 h-auto",
-            "hover:bg-gray-700"
-          )}
+          className={cn("w-full justify-start px-2 py-1 h-auto", "hover:bg-muted")}
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={(e) => {
             if (e.detail === 1) {
@@ -131,7 +128,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
           }}
         >
           <div
-            className="mr-1 p-0.5 hover:bg-gray-600 rounded cursor-pointer"
+            className="mr-1 p-0.5 hover:bg-muted rounded cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
               toggleExpand(node)
@@ -144,16 +141,14 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
             )}
           </div>
           {isExpanded ? (
-            <FolderOpen className="mr-2 h-4 w-4 text-yellow-600" />
+            <FolderOpen className="mr-2 h-4 w-4 text-yellow-500" />
           ) : (
-            <Folder className="mr-2 h-4 w-4 text-yellow-600" />
+            <Folder className="mr-2 h-4 w-4 text-yellow-500" />
           )}
-          <span className="text-sm truncate">{node.name}</span>
+          <span className="text-sm truncate text-foreground">{node.name}</span>
         </Button>
         {isExpanded && node.children && (
-          <div>
-            {node.children.map(child => renderNode(child, level + 1))}
-          </div>
+          <div>{node.children.map((child) => renderNode(child, level + 1))}</div>
         )}
       </div>
     )
@@ -161,10 +156,8 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
 
   return (
     <div className="py-2">
-      <h3 className="mb-2 px-4 text-xs font-semibold uppercase text-gray-400">
-        Folders
-      </h3>
-      {treeData.map(node => renderNode(node))}
+      <h3 className="mb-2 px-4 text-xs font-semibold uppercase text-gray-400">Folders</h3>
+      {treeData.map((node) => renderNode(node))}
     </div>
   )
 }

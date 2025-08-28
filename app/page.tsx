@@ -1,20 +1,20 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { DrivesList } from '@/components/explorer/DrivesList'
-import { DirectoryTree } from '@/components/explorer/DirectoryTree'
-import { FilesList } from '@/components/explorer/FilesList'
-import { Toolbar } from '@/components/explorer/Toolbar'
-import { StatusBar } from '@/components/explorer/StatusBar'
-import { FileItem, ViewMode } from '@/types/explorer'
+import { useState, useEffect } from "react"
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { DrivesList } from "@/components/explorer/DrivesList"
+import { DirectoryTree } from "@/components/explorer/DirectoryTree"
+import { FilesList } from "@/components/explorer/FilesList"
+import { Toolbar } from "@/components/explorer/Toolbar"
+import { StatusBar } from "@/components/explorer/StatusBar"
+import { FileItem, ViewMode } from "@/types/explorer"
 
 export default function Home() {
-  const [currentPath, setCurrentPath] = useState<string>('')
+  const [currentPath, setCurrentPath] = useState<string>("")
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState<number>(-1)
   const [files, setFiles] = useState<FileItem[]>([])
@@ -32,7 +32,7 @@ export default function Home() {
         navigateToPath(drives[0].path)
       }
     } catch (error) {
-      console.error('Failed to initialize path:', error)
+      console.error("Failed to initialize path:", error)
     }
   }
 
@@ -46,28 +46,28 @@ export default function Home() {
   const loadFiles = async () => {
     try {
       // Don't attempt to load if path is empty
-      if (!currentPath || currentPath.trim() === '') {
+      if (!currentPath || currentPath.trim() === "") {
         setFiles([])
         return
       }
-      
+
       const items = await window.electronAPI.fileSystem.readDirectory(currentPath)
       setFiles(items)
     } catch (error) {
-      console.error('Failed to load files:', error)
+      console.error("Failed to load files:", error)
       setFiles([])
     }
   }
 
   const navigateToPath = (path: string) => {
     if (path === currentPath) return
-    
+
     // Update history
     const newHistory = history.slice(0, historyIndex + 1)
     newHistory.push(path)
     setHistory(newHistory)
     setHistoryIndex(newHistory.length - 1)
-    
+
     setCurrentPath(path)
     setSelectedFiles([])
     setSelectedFile(null)
@@ -98,8 +98,8 @@ export default function Home() {
       // Detect Windows path by checking for drive letter pattern
       const isWindowsPath = segments.length > 0 && /^[A-Za-z]:?$/.test(segments[0])
       const parentPath = isWindowsPath
-        ? segments.join('\\') + (segments.length === 1 ? '\\' : '')
-        : '/' + segments.join('/')
+        ? segments.join("\\") + (segments.length === 1 ? "\\" : "")
+        : "/" + segments.join("/")
       navigateToPath(parentPath)
     }
   }
@@ -109,7 +109,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gray-900">
+    <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Toolbar */}
       <Toolbar
         currentPath={currentPath}
@@ -128,26 +128,23 @@ export default function Home() {
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Sidebar */}
         <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
-          <div className="h-full bg-gray-800">
+          <div className="h-full bg-card">
             <ScrollArea className="h-full">
               {/* Drives */}
-              <DrivesList
-                onDriveSelect={navigateToPath}
-                selectedPath={currentPath}
-              />
-              
+              <DrivesList onDriveSelect={navigateToPath} selectedPath={currentPath} />
+
               <Separator className="my-2" />
-              
+
               {/* Directory Tree */}
-              {currentPath && currentPath.trim() !== '' && (
+              {currentPath && currentPath.trim() !== "" && (
                 <DirectoryTree
                   rootPath={(() => {
                     const segments = currentPath.split(/[\\/]/).filter(Boolean)
-                    if (segments.length === 0) return ''
+                    if (segments.length === 0) return ""
                     const firstSegment = segments[0]
                     // Check if it's a Windows drive letter
                     const isWindowsPath = /^[A-Za-z]:?$/.test(firstSegment)
-                    return firstSegment + (isWindowsPath ? '\\' : '/')
+                    return firstSegment + (isWindowsPath ? "\\" : "/")
                   })()}
                   selectedPath={currentPath}
                   onPathSelect={navigateToPath}
@@ -161,7 +158,7 @@ export default function Home() {
 
         {/* Files area */}
         <ResizablePanel defaultSize={75}>
-          <div className="flex h-full flex-col bg-gray-900">
+          <div className="flex h-full flex-col bg-background">
             <FilesList
               path={currentPath}
               viewMode={viewMode}
@@ -175,11 +172,7 @@ export default function Home() {
       </ResizablePanelGroup>
 
       {/* Status Bar */}
-      <StatusBar
-        files={files}
-        selectedCount={selectedFiles.length}
-        currentPath={currentPath}
-      />
+      <StatusBar files={files} selectedCount={selectedFiles.length} currentPath={currentPath} />
     </div>
   )
 }

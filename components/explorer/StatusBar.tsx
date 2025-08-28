@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import { FileItem } from '@/types/explorer'
-import { formatFileSize } from '@/lib/fileUtils'
-import { FileVideo, Music, Image } from 'lucide-react'
+import { FileItem } from "@/types/explorer"
+import { formatFileSize } from "@/lib/fileUtils"
+import { FileVideo, Music, Image } from "lucide-react"
 
 interface StatusBarProps {
   files: FileItem[]
@@ -11,33 +11,27 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ files, selectedCount, currentPath }: StatusBarProps) {
-  const totalFiles = files.filter(f => !f.isDirectory).length
-  const totalFolders = files.filter(f => f.isDirectory).length
-  
+  const totalFiles = files.filter((f) => !f.isDirectory).length
+  const totalFolders = files.filter((f) => f.isDirectory).length
+
   const mediaCount = {
-    video: files.filter(f => f.mediaType === 'video').length,
-    audio: files.filter(f => f.mediaType === 'audio').length,
-    image: files.filter(f => f.mediaType === 'image').length
+    video: files.filter((f) => f.mediaType === "video").length,
+    audio: files.filter((f) => f.mediaType === "audio").length,
+    image: files.filter((f) => f.mediaType === "image").length,
   }
-  
-  const totalSize = files
-    .filter(f => !f.isDirectory)
-    .reduce((sum, f) => sum + f.size, 0)
+
+  const totalSize = files.filter((f) => !f.isDirectory).reduce((sum, f) => sum + f.size, 0)
 
   return (
-    <div className="border-t border-gray-700 bg-gray-800 px-4 py-1.5">
-      <div className="flex items-center justify-between text-xs text-gray-400">
+    <div className="border-t border-border bg-card px-4 py-1.5">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
           <span>
             {totalFiles} files, {totalFolders} folders
           </span>
-          {selectedCount > 0 && (
-            <span className="text-blue-400">
-              {selectedCount} selected
-            </span>
-          )}
+          {selectedCount > 0 && <span className="text-primary">{selectedCount} selected</span>}
         </div>
-        
+
         <div className="flex items-center gap-4">
           {mediaCount.video > 0 && (
             <div className="flex items-center gap-1">
@@ -57,7 +51,7 @@ export function StatusBar({ files, selectedCount, currentPath }: StatusBarProps)
               <span>{mediaCount.image}</span>
             </div>
           )}
-          <span className="text-gray-500">|</span>
+          <span className="text-muted-foreground">|</span>
           <span>{formatFileSize(totalSize)}</span>
         </div>
       </div>
