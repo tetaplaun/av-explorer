@@ -25,11 +25,17 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    loadDirectory(rootPath)
+    if (rootPath && rootPath.trim() !== '') {
+      loadDirectory(rootPath)
+    }
   }, [rootPath])
 
   const loadDirectory = async (path: string) => {
     try {
+      if (!path || path.trim() === '') {
+        setTreeData([])
+        return
+      }
       const items = await window.electronAPI.fileSystem.readDirectory(path)
       const directories = items
         .filter(item => item.isDirectory)

@@ -139,10 +139,12 @@ export default function Home() {
               <Separator className="my-2" />
               
               {/* Directory Tree */}
-              {currentPath && (
+              {currentPath && currentPath.trim() !== '' && (
                 <DirectoryTree
                   rootPath={(() => {
-                    const firstSegment = currentPath.split(/[\\/]/)[0]
+                    const segments = currentPath.split(/[\\/]/).filter(Boolean)
+                    if (segments.length === 0) return ''
+                    const firstSegment = segments[0]
                     // Check if it's a Windows drive letter
                     const isWindowsPath = /^[A-Za-z]:?$/.test(firstSegment)
                     return firstSegment + (isWindowsPath ? '\\' : '/')

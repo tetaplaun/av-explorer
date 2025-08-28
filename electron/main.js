@@ -117,7 +117,7 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
   try {
     // Validate the directory path
     if (!dirPath || dirPath.trim() === '') {
-      console.error('Invalid directory path: empty or null')
+      // Silently return empty array for empty paths
       return []
     }
     
