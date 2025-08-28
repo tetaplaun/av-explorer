@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { FileItem, ViewMode } from "@/types/explorer"
-import { getFileIcon, getFileIconColor, formatFileSize, formatDate } from "@/lib/fileUtils"
+import { getFileIcon, getFileIconColor, formatFileSize, formatDate, truncateFilename } from "@/lib/fileUtils"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Loader2 } from "lucide-react"
 
 interface FilesListProps {
@@ -91,8 +92,8 @@ export function FilesList({
       <ScrollArea className="h-full">
         <div className="grid grid-cols-4 gap-4 p-4 lg:grid-cols-6 xl:grid-cols-8">
           {files.map((file) => {
-            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType)
-            const iconColor = getFileIconColor(file.mediaType)
+            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
+            const iconColor = getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
             const isSelected = selectedFiles.includes(file.path)
 
             return (
@@ -106,9 +107,25 @@ export function FilesList({
                 onClick={(e) => handleItemClick(file, e)}
               >
                 <Icon className={cn("mb-2 h-12 w-12", iconColor)} />
-                <span className="text-center text-xs text-foreground line-clamp-2">
-                  {file.name}
-                </span>
+                {(() => {
+                  const { display, needsTooltip } = truncateFilename(file.name, 20)
+                  return (
+                    <TooltipProvider>
+                      <Tooltip delayDuration={500}>
+                        <TooltipTrigger asChild>
+                          <span className="text-center text-xs text-foreground block max-w-full">
+                            {display}
+                          </span>
+                        </TooltipTrigger>
+                        {needsTooltip && (
+                          <TooltipContent>
+                            <p className="max-w-xs break-all">{file.name}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
+                })()}
               </div>
             )
           })}
@@ -122,8 +139,8 @@ export function FilesList({
       <ScrollArea className="h-full">
         <div className="space-y-1 p-2">
           {files.map((file) => {
-            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType)
-            const iconColor = getFileIconColor(file.mediaType)
+            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
+            const iconColor = getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
             const isSelected = selectedFiles.includes(file.path)
 
             return (
@@ -137,7 +154,23 @@ export function FilesList({
                 onClick={(e) => handleItemClick(file, e)}
               >
                 <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
-                <span className="flex-1 truncate text-sm text-foreground">{file.name}</span>
+                {(() => {
+                  const { display, needsTooltip } = truncateFilename(file.name, 40)
+                  return (
+                    <TooltipProvider>
+                      <Tooltip delayDuration={500}>
+                        <TooltipTrigger asChild>
+                          <span className="flex-1 text-sm text-foreground">{display}</span>
+                        </TooltipTrigger>
+                        {needsTooltip && (
+                          <TooltipContent>
+                            <p className="max-w-md break-all">{file.name}</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
+                })()}
                 {!file.isDirectory && (
                   <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
                 )}
@@ -163,8 +196,8 @@ export function FilesList({
         </thead>
         <tbody>
           {files.map((file) => {
-            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType)
-            const iconColor = getFileIconColor(file.mediaType)
+            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
+            const iconColor = getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
             const isSelected = selectedFiles.includes(file.path)
 
             return (
@@ -178,9 +211,25 @@ export function FilesList({
                 onClick={(e) => handleItemClick(file, e)}
               >
                 <td className="px-4 py-2">
-                  <div className="flex items-center gap-2">
-                    <Icon className={cn("h-4 w-4", iconColor)} />
-                    <span className="text-sm text-foreground">{file.name}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
+                    {(() => {
+                      const { display, needsTooltip } = truncateFilename(file.name, 50)
+                      return (
+                        <TooltipProvider>
+                          <Tooltip delayDuration={500}>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm text-foreground">{display}</span>
+                            </TooltipTrigger>
+                            {needsTooltip && (
+                              <TooltipContent>
+                                <p className="max-w-md break-all">{file.name}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      )
+                    })()}
                   </div>
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">

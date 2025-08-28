@@ -1,4 +1,6 @@
-import { FileVideo, Music, Image, Folder, File, HardDrive } from 'lucide-react'
+import { HardDrive } from 'lucide-react'
+import { getCachedFileIcon, folderIcon, folderOpenIcon } from './fileIconMapping'
+import path from 'path'
 
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -31,39 +33,80 @@ export function formatDate(date: Date | null): string {
 export function getFileIcon(
   extension: string,
   isDirectory: boolean,
-  mediaType?: 'video' | 'audio' | 'image' | null
+  mediaType?: 'video' | 'audio' | 'image' | null,
+  filename?: string
 ) {
   if (isDirectory) {
-    return Folder
+    return folderIcon.icon
   }
   
-  switch (mediaType) {
-    case 'video':
-      return FileVideo
-    case 'audio':
-      return Music
-    case 'image':
-      return Image
-    default:
-      return File
-  }
+  // Use the comprehensive icon mapping system
+  const name = filename || ''
+  const iconMapping = getCachedFileIcon(name, extension)
+  return iconMapping.icon
 }
 
-export function getFileIconColor(mediaType?: 'video' | 'audio' | 'image' | null): string {
-  switch (mediaType) {
-    case 'video':
-      return 'text-purple-500'
-    case 'audio':
-      return 'text-green-500'
-    case 'image':
-      return 'text-blue-500'
-    default:
-      return 'text-gray-400'
+export function getFileIconColor(
+  mediaType?: 'video' | 'audio' | 'image' | null,
+  extension?: string,
+  isDirectory?: boolean,
+  filename?: string
+): string {
+  if (isDirectory) {
+    return folderIcon.color
   }
+  
+  // Use the comprehensive icon mapping system
+  const ext = extension || ''
+  const name = filename || ''
+  const iconMapping = getCachedFileIcon(name, ext)
+  return iconMapping.color
 }
 
 export function getDriveIcon() {
   return HardDrive
+}
+
+export function truncateFilename(filename: string, maxLength: number = 30): { 
+  display: string
+  needsTooltip: boolean 
+} {
+  if (filename.length <= maxLength) {
+    return { display: filename, needsTooltip: false }
+  }
+
+  // Find the last dot for extension
+  const lastDotIndex = filename.lastIndexOf('.')
+  const hasExtension = lastDotIndex > 0 && lastDotIndex < filename.length - 1
+  
+  if (!hasExtension) {
+    // No extension, just truncate with ellipsis
+    return { 
+      display: filename.substring(0, maxLength - 3) + '...', 
+      needsTooltip: true 
+    }
+  }
+
+  const name = filename.substring(0, lastDotIndex)
+  const extension = filename.substring(lastDotIndex)
+  
+  // Reserve space for extension and ellipsis
+  const availableSpace = maxLength - extension.length - 3
+  
+  if (availableSpace <= 0) {
+    // Extension is too long, just show extension with ellipsis
+    return { 
+      display: '...' + extension, 
+      needsTooltip: true 
+    }
+  }
+  
+  // Truncate the name part and keep the extension
+  const truncatedName = name.substring(0, availableSpace)
+  return { 
+    display: truncatedName + '...' + extension, 
+    needsTooltip: true 
+  }
 }
 
 export function getPathSegments(path: string): { name: string; path: string }[] {
