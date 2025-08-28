@@ -14,18 +14,34 @@ interface DrivesBarProps {
 export function DrivesBar({ onDriveSelect, selectedPath }: DrivesBarProps) {
   const [drives, setDrives] = useState<DriveInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDrives()
   }, [])
 
+  const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const id = setTimeout(() => reject(new Error('timeout')), ms)
+      p.then((val) => {
+        clearTimeout(id)
+        resolve(val)
+      }).catch((err) => {
+        clearTimeout(id)
+        reject(err)
+      })
+    })
+  }
+
   const loadDrives = async () => {
     try {
       setLoading(true)
-      const drivesList = await window.electronAPI.fileSystem.getDrives()
+      setError(null)
+      const drivesList = await withTimeout(window.electronAPI.fileSystem.getDrives(), 8000)
       setDrives(drivesList)
     } catch (error) {
       console.error("Failed to load drives:", error)
+      setError('Failed to load drives')
     } finally {
       setLoading(false)
     }
@@ -35,6 +51,16 @@ export function DrivesBar({ onDriveSelect, selectedPath }: DrivesBarProps) {
     <div className="border-b border-border bg-card px-3 py-2">
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading drives...</div>
+      ) : error ? (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Couldn’t load drives.</span>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={loadDrives}>Retry</Button>
+        </div>
+      ) : drives.length === 0 ? (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">No drives found.</span>
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={loadDrives}>Refresh</Button>
+        </div>
       ) : (
         <div className="flex items-center gap-2 overflow-x-auto">
           {drives.map((drive) => {
@@ -68,4 +94,3 @@ export function DrivesBar({ onDriveSelect, selectedPath }: DrivesBarProps) {
     </div>
   )
 }
-

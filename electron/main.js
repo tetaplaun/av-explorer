@@ -58,8 +58,9 @@ ipcMain.handle('app-info', () => {
 ipcMain.handle('get-drives', async () => {
   if (process.platform === 'win32') {
     try {
-      // Use PowerShell instead of deprecated wmic command
-      const { stdout } = await execPromise('powershell -Command "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name=\'FreeSpace\';Expression={$_.Free}}, @{Name=\'TotalSize\';Expression={$_.Used + $_.Free}} | ConvertTo-Json"')
+      // Use PowerShell with no profile and a timeout for reliability
+      const psCmd = 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name=\'FreeSpace\';Expression={$_.Free}}, @{Name=\'TotalSize\';Expression={$_.Used + $_.Free}} | ConvertTo-Json"'
+      const { stdout } = await execPromise(psCmd, { timeout: 5000, windowsHide: true, maxBuffer: 5 * 1024 * 1024 })
       const drivesData = JSON.parse(stdout)
       const drives = []
       
@@ -80,7 +81,7 @@ ipcMain.handle('get-drives', async () => {
       
       return drives
     } catch (error) {
-      console.error('Error getting drives:', error)
+      console.error('Error getting drives (PowerShell path):', error && error.message ? error.message : error)
       // Fallback: try to detect drives using fs.existsSync
       const drives = []
       const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
