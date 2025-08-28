@@ -7,6 +7,7 @@ export interface FileItem {
   created: Date | null
   extension: string
   mediaType?: 'video' | 'audio' | 'image' | null
+  encodedDate?: Date | null
 }
 
 export interface DriveInfo {

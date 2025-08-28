@@ -170,7 +170,8 @@ export function isMediaFile(extension: string): boolean {
   const mediaExtensions = [
     '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg',
     '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a', '.opus',
-    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico', '.tiff'
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico', '.tiff',
+    '.heic', '.heif', '.avif', '.raw', '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2'
   ]
   
   return mediaExtensions.includes(extension.toLowerCase())

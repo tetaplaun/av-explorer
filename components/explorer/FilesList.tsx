@@ -197,6 +197,7 @@ export function FilesList({
             <th className="px-4 py-2">Size</th>
             <th className="px-4 py-2">Date Created</th>
             <th className="px-4 py-2">Date Modified</th>
+            <th className="px-4 py-2">Encoded Date</th>
           </tr>
         </thead>
         <tbody>
@@ -248,6 +249,9 @@ export function FilesList({
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
                   {formatDateTime(file.modified)}
+                </td>
+                <td className="px-4 py-2 text-sm text-muted-foreground">
+                  {file.encodedDate ? formatDateTime(file.encodedDate) : '-'}
                 </td>
               </tr>
             )

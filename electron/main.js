@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs').promises
-const { exec } = require('child_process')
+const { exec, execFile } = require('child_process')
 const { promisify } = require('util')
 const execPromise = promisify(exec)
+const execFilePromise = promisify(execFile)
 const isDev = process.env.NODE_ENV === 'development'
 
 let mainWindow
@@ -213,6 +214,39 @@ ipcMain.handle('refresh-drives', async () => {
   return await ipcMain._events['get-drives'][0]()
 })
 
+// Function to get encoded date from MediaInfo
+async function getEncodedDate(filePath) {
+  try {
+    // Use MediaInfo to get encoded date
+    const { stdout } = await execFilePromise('mediainfo', [
+      '--Output=General;%Encoded_Date%',
+      filePath
+    ], { 
+      timeout: 3000,
+      windowsHide: true 
+    })
+    
+    const encodedDateStr = stdout.trim()
+    
+    // MediaInfo returns dates in format like "UTC 2025-08-25 20:18:16"
+    if (encodedDateStr && encodedDateStr !== '') {
+      // Remove UTC prefix if present
+      const dateStr = encodedDateStr.replace(/^UTC\s+/, '')
+      const parsedDate = new Date(dateStr)
+      
+      // Check if date is valid
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate
+      }
+    }
+    
+    return null
+  } catch (error) {
+    // MediaInfo might not be installed or file might not have encoded date
+    return null
+  }
+}
+
 ipcMain.handle('read-directory', async (event, dirPath) => {
   try {
     // Validate the directory path
@@ -249,7 +283,7 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
       const mediaExtensions = {
         video: ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg'],
         audio: ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a', '.opus'],
-        image: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico', '.tiff']
+        image: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico', '.tiff', '.heic', '.heif', '.avif', '.raw', '.dng', '.cr2', '.cr3', '.nef', '.arw', '.orf', '.rw2']
       }
       
       item.mediaType = null
@@ -258,6 +292,12 @@ ipcMain.handle('read-directory', async (event, dirPath) => {
           item.mediaType = type
           break
         }
+      }
+      
+      // Get encoded date for all media files (including images)
+      item.encodedDate = null
+      if (item.mediaType === 'video' || item.mediaType === 'audio' || item.mediaType === 'image') {
+        item.encodedDate = await getEncodedDate(fullPath)
       }
       
       items.push(item)
