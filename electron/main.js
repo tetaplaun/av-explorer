@@ -1,5 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
+const fs = require('fs').promises
+const { exec } = require('child_process')
+const { promisify } = require('util')
+const execPromise = promisify(exec)
 const isDev = process.env.NODE_ENV === 'development'
 
 let mainWindow
@@ -47,5 +51,137 @@ ipcMain.handle('app-info', () => {
   return {
     name: app.getName(),
     version: app.getVersion()
+  }
+})
+
+// File System Operations
+ipcMain.handle('get-drives', async () => {
+  if (process.platform === 'win32') {
+    try {
+      const { stdout } = await execPromise('wmic logicaldisk get size,freespace,caption')
+      const lines = stdout.trim().split('\n').slice(1)
+      const drives = []
+      
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/)
+        if (parts[0]) {
+          const driveLetter = parts[0]
+          const freeSpace = parts[1] ? parseInt(parts[1]) : 0
+          const totalSize = parts[2] ? parseInt(parts[2]) : 0
+          
+          drives.push({
+            name: driveLetter,
+            path: driveLetter + '\\',
+            type: 'drive',
+            freeSpace,
+            totalSize
+          })
+        }
+      }
+      return drives
+    } catch (error) {
+      console.error('Error getting drives:', error)
+      return []
+    }
+  } else {
+    // For Unix-like systems, return root
+    return [{
+      name: 'Root',
+      path: '/',
+      type: 'drive'
+    }]
+  }
+})
+
+ipcMain.handle('read-directory', async (event, dirPath) => {
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    const items = []
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name)
+      let stats = null
+      
+      try {
+        stats = await fs.stat(fullPath)
+      } catch (error) {
+        // Skip files we can't access
+        continue
+      }
+      
+      const item = {
+        name: entry.name,
+        path: fullPath,
+        isDirectory: entry.isDirectory(),
+        size: stats ? stats.size : 0,
+        modified: stats ? stats.mtime : null,
+        extension: entry.isDirectory() ? '' : path.extname(entry.name).toLowerCase()
+      }
+      
+      // Determine if it's a media file
+      const mediaExtensions = {
+        video: ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg'],
+        audio: ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a', '.opus'],
+        image: ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico', '.tiff']
+      }
+      
+      item.mediaType = null
+      for (const [type, extensions] of Object.entries(mediaExtensions)) {
+        if (extensions.includes(item.extension)) {
+          item.mediaType = type
+          break
+        }
+      }
+      
+      items.push(item)
+    }
+    
+    // Sort: directories first, then by name
+    items.sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1
+      if (!a.isDirectory && b.isDirectory) return 1
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    })
+    
+    return items
+  } catch (error) {
+    console.error('Error reading directory:', error)
+    return []
+  }
+})
+
+ipcMain.handle('get-path-info', async (event, filePath) => {
+  try {
+    const stats = await fs.stat(filePath)
+    return {
+      exists: true,
+      isDirectory: stats.isDirectory(),
+      size: stats.size,
+      modified: stats.mtime,
+      created: stats.birthtime
+    }
+  } catch (error) {
+    return {
+      exists: false,
+      error: error.message
+    }
+  }
+})
+
+ipcMain.handle('open-file', async (event, filePath) => {
+  try {
+    await shell.openPath(filePath)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('show-item-in-folder', async (event, filePath) => {
+  try {
+    shell.showItemInFolder(filePath)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
   }
 })

@@ -13,5 +13,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event, ...args) => func(...args))
     }
+  },
+  // File System APIs
+  fileSystem: {
+    getDrives: () => ipcRenderer.invoke('get-drives'),
+    readDirectory: (path) => ipcRenderer.invoke('read-directory', path),
+    getPathInfo: (path) => ipcRenderer.invoke('get-path-info', path),
+    openFile: (path) => ipcRenderer.invoke('open-file', path),
+    showItemInFolder: (path) => ipcRenderer.invoke('show-item-in-folder', path)
   }
 })
