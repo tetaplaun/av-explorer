@@ -18,6 +18,7 @@ interface TreeNode {
   children?: TreeNode[]
   isExpanded: boolean
   isLoading: boolean
+  hasSubdirectories?: boolean
 }
 
 export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: DirectoryTreeProps) {
@@ -61,18 +62,32 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
       const items = await window.electronAPI.fileSystem.readDirectory(path)
       const directories = items
         .filter((item) => item.isDirectory)
-        .map((dir) => ({
+      
+      // For each directory, check if it has subdirectories
+      const directoriesWithInfo = await Promise.all(directories.map(async (dir) => {
+        let hasSubdirs = false
+        try {
+          const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
+          hasSubdirs = subItems.some(item => item.isDirectory)
+        } catch {
+          // If we can't read the directory, don't show expand chevron
+          hasSubdirs = false
+        }
+        
+        return {
           path: dir.path,
           name: dir.name,
           isExpanded: expandedPaths.has(dir.path),
           isLoading: false,
+          hasSubdirectories: hasSubdirs,
           children: expandedPaths.has(dir.path) ? [] : undefined,
-        }))
+        }
+      }))
 
-      setTreeData(directories)
+      setTreeData(directoriesWithInfo)
 
       // Load children for expanded directories
-      for (const dir of directories) {
+      for (const dir of directoriesWithInfo) {
         if (expandedPaths.has(dir.path)) {
           // Check if this directory is part of the selected path
           if (selectedPath && selectedPath.startsWith(dir.path)) {
@@ -95,15 +110,29 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
       const items = await window.electronAPI.fileSystem.readDirectory(path)
       const directories = items
         .filter((item) => item.isDirectory)
-        .map((dir) => ({
+      
+      // For each directory, check if it has subdirectories
+      const directoriesWithInfo = await Promise.all(directories.map(async (dir) => {
+        let hasSubdirs = false
+        try {
+          const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
+          hasSubdirs = subItems.some(item => item.isDirectory)
+        } catch {
+          // If we can't read the directory, don't show expand chevron
+          hasSubdirs = false
+        }
+        
+        return {
           path: dir.path,
           name: dir.name,
-          isExpanded: expandedPaths.has(dir.path),
+          isExpanded: false,  // Don't auto-expand children when manually loading
           isLoading: false,
-          children: expandedPaths.has(dir.path) ? [] : undefined,
-        }))
+          hasSubdirectories: hasSubdirs,
+          children: undefined,  // Children will be loaded when explicitly expanded
+        }
+      }))
 
-      updateNodeChildren(path, directories)
+      updateNodeChildren(path, directoriesWithInfo)
     } catch (error) {
       console.error("Failed to load children:", error)
     }
@@ -190,22 +219,34 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
       const items = await window.electronAPI.fileSystem.readDirectory(path)
       const directories = items
         .filter((item) => item.isDirectory)
-        .map((dir) => {
-          // Check if this directory is in our hierarchy and should be expanded
-          const shouldExpand = fullHierarchy.includes(dir.path)
-          return {
-            path: dir.path,
-            name: dir.name,
-            isExpanded: shouldExpand,
-            isLoading: false,
-            children: shouldExpand ? [] : undefined,
-          }
-        })
+      
+      // For each directory, check if it has subdirectories
+      const directoriesWithInfo = await Promise.all(directories.map(async (dir) => {
+        let hasSubdirs = false
+        try {
+          const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
+          hasSubdirs = subItems.some(item => item.isDirectory)
+        } catch {
+          // If we can't read the directory, don't show expand chevron
+          hasSubdirs = false
+        }
+        
+        // Check if this directory is in our hierarchy and should be expanded
+        const shouldExpand = fullHierarchy.includes(dir.path)
+        return {
+          path: dir.path,
+          name: dir.name,
+          isExpanded: shouldExpand,
+          isLoading: false,
+          hasSubdirectories: hasSubdirs,
+          children: shouldExpand ? [] : undefined,
+        }
+      }))
 
-      updateNodeChildren(path, directories)
+      updateNodeChildren(path, directoriesWithInfo)
       
       // Recursively load children for directories in the hierarchy
-      for (const dir of directories) {
+      for (const dir of directoriesWithInfo) {
         if (fullHierarchy.includes(dir.path)) {
           await loadChildrenRecursive(dir.path, fullHierarchy)
         }
@@ -219,7 +260,14 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
     const newExpanded = new Set(expandedPaths)
 
     if (expandedPaths.has(node.path)) {
+      // When collapsing, also remove any expanded children
       newExpanded.delete(node.path)
+      // Remove all paths that start with this node's path
+      for (const expandedPath of newExpanded) {
+        if (expandedPath.startsWith(node.path + (node.path.endsWith('\\') ? '' : '\\'))) {
+          newExpanded.delete(expandedPath)
+        }
+      }
     } else {
       newExpanded.add(node.path)
       if (!node.children) {
@@ -246,19 +294,23 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
             }
           }}
         >
-          <div
-            className="mr-1 p-0.5 hover:bg-muted rounded cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleExpand(node)
-            }}
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
-          </div>
+          {node.hasSubdirectories === true ? (
+            <div
+              className="mr-1 p-0.5 hover:bg-muted rounded cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleExpand(node)
+              }}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </div>
+          ) : (
+            <div className="mr-1 p-0.5 w-4" /> 
+          )}
           {isExpanded ? (
             <FolderOpen className="mr-2 h-4 w-4 text-yellow-500" />
           ) : (
