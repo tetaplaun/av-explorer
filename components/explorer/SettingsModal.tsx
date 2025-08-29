@@ -28,7 +28,7 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { settings, setSetting } = useSettings()
   const { theme, setTheme } = useTheme()
-  
+
   // Local state for form values
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sidebarWidth, setSidebarWidth] = useState(250)
@@ -38,7 +38,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [dateDiffCreation, setDateDiffCreation] = useState(true)
   const [dateDiffModified, setDateDiffModified] = useState(true)
   const [dateDiffMaxDays, setDateDiffMaxDays] = useState(7)
-  
+
   // Load settings when modal opens
   useEffect(() => {
     if (open) {
@@ -54,7 +54,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       }
     }
   }, [open, settings, theme])
-  
+
   const handleSave = () => {
     // Save all settings
     setTheme(selectedTheme)
@@ -69,10 +69,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       checkModifiedDate: dateDiffModified,
       maxDifferenceInDays: dateDiffMaxDays,
     })
-    
+
     onOpenChange(false)
   }
-  
+
   const handleCancel = () => {
     // Reset to current settings
     setSelectedTheme(theme)
@@ -87,7 +87,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
     onOpenChange(false)
   }
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -96,12 +96,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <Settings className="h-5 w-5" />
             Settings
           </DialogTitle>
-          <DialogDescription>
-            Configure your application preferences
-          </DialogDescription>
+          <DialogDescription>Configure your application preferences</DialogDescription>
         </DialogHeader>
-        
-        <ScrollArea className="h-[400px] pr-4">
+
+        <ScrollArea className="h-[400px] pr-6">
           <div className="space-y-6">
             {/* View Preferences */}
             <div className="space-y-4">
@@ -109,8 +107,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <Monitor className="h-4 w-4" />
                 View Preferences
               </h3>
-              
-              <div className="space-y-3 pl-6">
+
+              <div className="space-y-3 pl-6 pr-6">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="viewMode">Default View Mode</Label>
                   <select
@@ -124,7 +122,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     <option value="details">Details</option>
                   </select>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <Label htmlFor="sidebarWidth">Sidebar Width (px)</Label>
                   <Input
@@ -139,25 +137,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
             </div>
-            
+
             <Separator />
-            
+
             {/* Theme Settings */}
-            <div className="space-y-4">
+            <div className="space-y-4 pr-6">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Sun className="h-4 w-4" />
                 Appearance
               </h3>
-              
+
               <div className="space-y-3 pl-6">
                 <div className="space-y-2">
                   <Label>Theme</Label>
                   <div className="flex gap-2">
                     <Button
                       type="button"
-                      variant={selectedTheme === 'light' ? 'default' : 'outline'}
+                      variant={selectedTheme === "light" ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedTheme('light')}
+                      onClick={() => setSelectedTheme("light")}
                       className="flex items-center gap-2"
                     >
                       <Sun className="h-4 w-4" />
@@ -165,9 +163,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </Button>
                     <Button
                       type="button"
-                      variant={selectedTheme === 'dark' ? 'default' : 'outline'}
+                      variant={selectedTheme === "dark" ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedTheme('dark')}
+                      onClick={() => setSelectedTheme("dark")}
                       className="flex items-center gap-2"
                     >
                       <Moon className="h-4 w-4" />
@@ -175,33 +173,34 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </Button>
                     <Button
                       type="button"
-                      variant={selectedTheme === 'system' ? 'default' : 'outline'}
+                      variant={selectedTheme === "system" ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedTheme('system')}
+                      onClick={() => setSelectedTheme("system")}
                       className="flex items-center gap-2"
                     >
                       <Laptop className="h-4 w-4" />
                       System
                     </Button>
                   </div>
-                  {selectedTheme === 'system' && (
+                  {selectedTheme === "system" && (
                     <p className="text-xs text-muted-foreground">
-                      Automatically switch between light and dark themes based on your system settings
+                      Automatically switch between light and dark themes based on your system
+                      settings
                     </p>
                   )}
                 </div>
               </div>
             </div>
-            
+
             <Separator />
-            
+
             {/* Date Sync Defaults */}
-            <div className="space-y-4">
+            <div className="space-y-4 pr-6">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Date Sync Defaults
               </h3>
-              
+
               <div className="space-y-3 pl-6">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="dateSyncCreation">Set Creation Date</Label>
@@ -211,7 +210,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     onCheckedChange={setDateSyncCreation}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <Label htmlFor="dateSyncModified">Set Modified Date</Label>
                   <Switch
@@ -222,16 +221,16 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
             </div>
-            
+
             <Separator />
-            
+
             {/* Date Difference Defaults */}
-            <div className="space-y-4">
+            <div className="space-y-4 pr-6">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Date Difference Selection Defaults
               </h3>
-              
+
               <div className="space-y-3 pl-6">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="dateDiffCreation">Check Creation Date</Label>
@@ -241,7 +240,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     onCheckedChange={setDateDiffCreation}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <Label htmlFor="dateDiffModified">Check Modified Date</Label>
                   <Switch
@@ -250,7 +249,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     onCheckedChange={setDateDiffModified}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <Label htmlFor="dateDiffMaxDays">Max Difference (days)</Label>
                   <Input
@@ -265,42 +264,43 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
             </div>
-            
+
             <Separator />
-            
+
             {/* Current Session Info */}
-            <div className="space-y-4">
+            <div className="space-y-4 pr-6">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <FolderOpen className="h-4 w-4" />
                 Current Session
               </h3>
-              
+
               <div className="space-y-2 pl-6">
                 <div className="text-sm text-muted-foreground">
-                  <span className="font-medium">Last Path:</span>{" "}
-                  {settings?.lastPath || "Not set"}
+                  <span className="font-medium">Last Path:</span> {settings?.lastPath || "Not set"}
                 </div>
                 {settings?.windowBounds && (
                   <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Window Size:</span>{" "}
-                    {settings.windowBounds.width} × {settings.windowBounds.height}
-                    {settings.windowBounds.x !== undefined && settings.windowBounds.y !== undefined && (
-                      <span> at ({settings.windowBounds.x}, {settings.windowBounds.y})</span>
-                    )}
+                    <span className="font-medium">Window Size:</span> {settings.windowBounds.width}{" "}
+                    × {settings.windowBounds.height}
+                    {settings.windowBounds.x !== undefined &&
+                      settings.windowBounds.y !== undefined && (
+                        <span>
+                          {" "}
+                          at ({settings.windowBounds.x}, {settings.windowBounds.y})
+                        </span>
+                      )}
                   </div>
                 )}
               </div>
             </div>
           </div>
         </ScrollArea>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
-            Save Changes
-          </Button>
+          <Button onClick={handleSave}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
