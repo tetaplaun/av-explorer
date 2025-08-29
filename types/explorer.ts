@@ -51,6 +51,7 @@ declare global {
         getEncodedDates: (fileItems: FileItem[]) => Promise<Record<string, Date>>
         openFile: (path: string) => Promise<{ success: boolean; error?: string }>
         showItemInFolder: (path: string) => Promise<{ success: boolean; error?: string }>
+        setFileDates: (files: FileItem[], options: { setCreationDate: boolean; setModifiedDate: boolean }) => Promise<Array<{ path: string; success: boolean; error?: string }>>
       }
     }
   }

@@ -72,12 +72,10 @@ export function DateSyncModal({
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="creation-date"
                 checked={setCreationDate}
                 onCheckedChange={(checked) => setSetCreationDate(checked as boolean)}
               />
               <label
-                htmlFor="creation-date"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Set Creation Date
@@ -86,12 +84,10 @@ export function DateSyncModal({
             
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="modified-date"
                 checked={setModifiedDate}
                 onCheckedChange={(checked) => setSetModifiedDate(checked as boolean)}
               />
               <label
-                htmlFor="modified-date"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Set Modified Date

@@ -10,6 +10,7 @@ import { Toolbar } from "@/components/explorer/Toolbar"
 import { StatusBar } from "@/components/explorer/StatusBar"
 import { FileActionsBar } from "@/components/explorer/FileActionsBar"
 import { DateSyncModal } from "@/components/explorer/DateSyncModal"
+import { DateDifferenceModal } from "@/components/explorer/DateDifferenceModal"
 import { FileItem, ViewMode } from "@/types/explorer"
 
 export default function Home() {
@@ -22,6 +23,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [dateSyncModalOpen, setDateSyncModalOpen] = useState(false)
+  const [dateDifferenceModalOpen, setDateDifferenceModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Initialize with first drive on mount
@@ -121,11 +123,57 @@ export default function Home() {
     })
   }
 
+  const handleSelectDateDifferences = (options: { 
+    checkCreationDate: boolean
+    checkModifiedDate: boolean
+    maxDifferenceInDays: number 
+  }) => {
+    // Filter files that have encoded dates and meet the criteria
+    const filesToSelect = files.filter(file => {
+      if (!file.encodedDate) return false
+      
+      const encodedTime = new Date(file.encodedDate).getTime()
+      const maxDiffMs = options.maxDifferenceInDays * 24 * 60 * 60 * 1000
+      
+      let meetsCreationCriteria = false
+      let meetsModifiedCriteria = false
+      
+      if (options.checkCreationDate && file.created) {
+        const createdTime = new Date(file.created).getTime()
+        const creationDiff = Math.abs(encodedTime - createdTime)
+        meetsCreationCriteria = creationDiff > maxDiffMs
+      }
+      
+      if (options.checkModifiedDate && file.modified) {
+        const modifiedTime = new Date(file.modified).getTime()
+        const modifiedDiff = Math.abs(encodedTime - modifiedTime)
+        meetsModifiedCriteria = modifiedDiff > maxDiffMs
+      }
+      
+      // Return true if any of the checked criteria are met
+      if (options.checkCreationDate && options.checkModifiedDate) {
+        return meetsCreationCriteria || meetsModifiedCriteria
+      } else if (options.checkCreationDate) {
+        return meetsCreationCriteria
+      } else if (options.checkModifiedDate) {
+        return meetsModifiedCriteria
+      }
+      
+      return false
+    })
+    
+    // Enable multiselect mode and select the matching files
+    setIsMultiSelectMode(true)
+    setSelectedFiles(filesToSelect.map(f => f.path))
+    
+    console.log(`Selected ${filesToSelect.length} files with date differences`)
+  }
+
   const handleSyncDates = async (options: { setCreationDate: boolean; setModifiedDate: boolean }) => {
     // Get selected files that have encoded dates
     const filesToSync = selectedFiles
       .map(filePath => files.find(f => f.path === filePath))
-      .filter(file => file && file.encodedDate)
+      .filter((file): file is FileItem => file !== undefined && file.encodedDate !== null && file.encodedDate !== undefined)
 
     if (filesToSync.length === 0) return
 
@@ -133,13 +181,13 @@ export default function Home() {
       const results = await window.electronAPI.fileSystem.setFileDates(filesToSync, options)
       
       // Check results
-      const successCount = results.filter(r => r.success).length
-      const failCount = results.filter(r => !r.success).length
+      const successCount = results.filter((r: { success: boolean }) => r.success).length
+      const failCount = results.filter((r: { success: boolean }) => !r.success).length
       
       if (failCount > 0) {
-        const failures = results.filter(r => !r.success)
+        const failures = results.filter((r: { success: boolean }) => !r.success)
         console.error(`Failed to update ${failCount} files:`)
-        failures.forEach(f => {
+        failures.forEach((f: { path: string; error?: string }) => {
           console.error(`  - ${f.path}: ${f.error}`)
         })
       }
@@ -191,6 +239,7 @@ export default function Home() {
         selectedCount={selectedFiles.length}
         hasFilesWithEncodedDates={hasFilesWithEncodedDates()}
         onSyncDates={() => setDateSyncModalOpen(true)}
+        onSelectDateDifferences={() => setDateDifferenceModalOpen(true)}
       />
 
       {/* Drives Bar (below file actions) */}
@@ -251,6 +300,13 @@ export default function Home() {
         onOpenChange={setDateSyncModalOpen}
         selectedCount={selectedFiles.length}
         onConfirm={handleSyncDates}
+      />
+      
+      {/* Date Difference Modal */}
+      <DateDifferenceModal
+        open={dateDifferenceModalOpen}
+        onOpenChange={setDateDifferenceModalOpen}
+        onConfirm={handleSelectDateDifferences}
       />
     </div>
   )

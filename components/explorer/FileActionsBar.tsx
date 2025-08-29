@@ -10,7 +10,8 @@ import {
   Trash2,
   FolderInput,
   FileEdit,
-  CalendarClock
+  CalendarClock,
+  CalendarSearch
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -27,6 +28,7 @@ interface FileActionsBarProps {
   onRename?: () => void
   onMove?: () => void
   onSyncDates?: () => void
+  onSelectDateDifferences?: () => void
 }
 
 export function FileActionsBar({
@@ -40,7 +42,8 @@ export function FileActionsBar({
   onDelete,
   onRename,
   onMove,
-  onSyncDates
+  onSyncDates,
+  onSelectDateDifferences
 }: FileActionsBarProps) {
   const hasSelection = selectedCount > 0
   const singleSelection = selectedCount === 1
@@ -66,6 +69,26 @@ export function FileActionsBar({
             </TooltipTrigger>
             <TooltipContent>
               <p>{isMultiSelectMode ? "Exit selection mode" : "Enter selection mode"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Select Date Differences Button */}
+        <TooltipProvider>
+          <Tooltip delayDuration={500}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSelectDateDifferences}
+                disabled={!onSelectDateDifferences}
+                className="h-8 px-2"
+              >
+                <CalendarSearch className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Select files with date differences</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
