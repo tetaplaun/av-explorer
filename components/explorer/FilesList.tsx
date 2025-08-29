@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Loader2, CornerLeftUp } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface FilesListProps {
   path: string
@@ -15,6 +16,8 @@ interface FilesListProps {
   onDirectoryOpen: (path: string) => void
   selectedFiles: string[]
   onSelectionChange: (files: string[]) => void
+  isMultiSelectMode?: boolean
+  files?: FileItem[]
 }
 
 export function FilesList({
@@ -24,6 +27,8 @@ export function FilesList({
   onDirectoryOpen,
   selectedFiles,
   onSelectionChange,
+  isMultiSelectMode = false,
+  files: externalFiles,
 }: FilesListProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -135,8 +140,11 @@ export function FilesList({
       }
     } else {
       // Single click
-      if (e.ctrlKey || e.metaKey) {
-        // Multi-select
+      if (isMultiSelectMode) {
+        // In multiselect mode, clicking toggles selection
+        toggleSelection(item.path)
+      } else if (e.ctrlKey || e.metaKey) {
+        // Multi-select with ctrl/cmd
         const newSelection = selectedFiles.includes(item.path)
           ? selectedFiles.filter((p) => p !== item.path)
           : [...selectedFiles, item.path]
@@ -148,6 +156,30 @@ export function FilesList({
       }
     }
   }
+
+  const toggleSelection = (filePath: string) => {
+    const newSelection = selectedFiles.includes(filePath)
+      ? selectedFiles.filter((p) => p !== filePath)
+      : [...selectedFiles, filePath]
+    onSelectionChange(newSelection)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedFiles.length === files.length) {
+      // If all selected, deselect all
+      onSelectionChange([])
+    } else {
+      // Select all files (excluding ".." parent entry)
+      const allPaths = files
+        .filter(f => f.name !== "..")
+        .map(f => f.path)
+      onSelectionChange(allPaths)
+    }
+  }
+
+  const isAllSelected = files.length > 0 && 
+    files.filter(f => f.name !== "..").every(f => selectedFiles.includes(f.path))
+  const isIndeterminate = selectedFiles.length > 0 && !isAllSelected
 
   if (loading) {
     return (
@@ -183,12 +215,21 @@ export function FilesList({
               <div
                 key={file.path}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center rounded-lg p-2 select-none",
+                  "relative flex cursor-pointer flex-col items-center rounded-lg p-2 select-none",
                   "hover:bg-muted",
                   isSelected && "bg-muted ring-2 ring-primary"
                 )}
                 onClick={(e) => handleItemClick(file, e)}
               >
+                {isMultiSelectMode && file.name !== ".." && (
+                  <div className="absolute top-1 left-1 z-10">
+                    <Checkbox 
+                      checked={selectedFiles.includes(file.path)}
+                      onCheckedChange={() => toggleSelection(file.path)}
+                      className="bg-background/80 backdrop-blur-sm rounded"
+                    />
+                  </div>
+                )}
                 <Icon className={cn("mb-2 h-12 w-12", iconColor)} />
                 {(() => {
                   if (isParentDir) {
@@ -257,6 +298,13 @@ export function FilesList({
                 )}
                 onClick={(e) => handleItemClick(file, e)}
               >
+                {isMultiSelectMode && file.name !== ".." && (
+                  <Checkbox 
+                    checked={selectedFiles.includes(file.path)}
+                    onCheckedChange={() => toggleSelection(file.path)}
+                    className="mr-2"
+                  />
+                )}
                 <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
                 {(() => {
                   if (isParentDir) {
@@ -306,6 +354,14 @@ export function FilesList({
       <table className="w-full">
         <thead className="sticky top-0 bg-card border-b border-border">
           <tr className="text-left text-xs text-muted-foreground">
+            {isMultiSelectMode && (
+              <th className="px-4 py-2 w-10">
+                <Checkbox 
+                  checked={isAllSelected ? true : isIndeterminate ? "indeterminate" : false}
+                  onCheckedChange={handleSelectAll}
+                />
+              </th>
+            )}
             <th className="px-4 py-2">Name</th>
             <th className="px-4 py-2">Type</th>
             <th className="px-4 py-2">Size</th>
@@ -335,6 +391,16 @@ export function FilesList({
                 )}
                 onClick={(e) => handleItemClick(file, e)}
               >
+                {isMultiSelectMode && (
+                  <td className="px-4 py-2">
+                    {file.name !== ".." && (
+                      <Checkbox 
+                        checked={selectedFiles.includes(file.path)}
+                        onCheckedChange={() => toggleSelection(file.path)}
+                      />
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />

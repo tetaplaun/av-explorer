@@ -8,6 +8,7 @@ import { DirectoryTree } from "@/components/explorer/DirectoryTree"
 import { FilesList } from "@/components/explorer/FilesList"
 import { Toolbar } from "@/components/explorer/Toolbar"
 import { StatusBar } from "@/components/explorer/StatusBar"
+import { FileActionsBar } from "@/components/explorer/FileActionsBar"
 import { FileItem, ViewMode } from "@/types/explorer"
 
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
   const [historyIndex, setHistoryIndex] = useState<number>(-1)
   const [files, setFiles] = useState<FileItem[]>([])
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
 
   // Initialize with first drive on mount
   useEffect(() => {
@@ -123,7 +125,20 @@ export default function Home() {
         canGoForward={historyIndex < history.length - 1}
       />
 
-      {/* Drives Bar (below toolbar) */}
+      {/* File Actions Bar */}
+      <FileActionsBar 
+        isMultiSelectMode={isMultiSelectMode}
+        onMultiSelectToggle={() => {
+          setIsMultiSelectMode(!isMultiSelectMode)
+          if (isMultiSelectMode) {
+            // Clear selection when exiting multiselect mode
+            setSelectedFiles([])
+          }
+        }}
+        selectedCount={selectedFiles.length}
+      />
+
+      {/* Drives Bar (below file actions) */}
       <DrivesBar onDriveSelect={navigateToPath} selectedPath={currentPath} />
 
       {/* Main content */}
@@ -163,6 +178,8 @@ export default function Home() {
               onDirectoryOpen={navigateToPath}
               selectedFiles={selectedFiles}
               onSelectionChange={setSelectedFiles}
+              isMultiSelectMode={isMultiSelectMode}
+              files={files}
             />
           </div>
         </ResizablePanel>
