@@ -24,7 +24,6 @@ import {
 import { useSettingsForm } from "@/hooks/useSettingsForm"
 import { useSettings } from "@/hooks/useSettings"
 import { ViewMode } from "@/types/explorer"
-import { ValidationError } from "@/lib/validation"
 import {
   SettingSection,
   SettingItem,
@@ -49,16 +48,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     updateField,
     resetForm,
     saveChanges,
-    hasChanges,
-    validateForm,
-    clearValidationErrors,
   } = useSettingsForm()
 
   const handleSave = async () => {
     try {
       await saveChanges()
       onOpenChange(false)
-    } catch (error) {
+    } catch {
       // Error is already logged in the hook
       // Could add toast notification here if desired
     }

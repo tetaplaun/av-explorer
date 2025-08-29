@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { FileItem } from "@/types/explorer"
+
 import { cn } from "@/lib/utils"
 
 interface DirectoryTreeProps {
@@ -40,8 +40,8 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
     if (selectedNodeRef.current && containerRef.current) {
       // Only scroll if the node is already visible (parent is expanded)
       selectedNodeRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+        behavior: "smooth",
+        block: "center",
       })
     }
   }, [selectedPath])
@@ -53,29 +53,30 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
         return
       }
       const items = await window.electronAPI.fileSystem.readDirectory(path)
-      const directories = items
-        .filter((item) => item.isDirectory)
-      
+      const directories = items.filter((item) => item.isDirectory)
+
       // For each directory, check if it has subdirectories
-      const directoriesWithInfo = await Promise.all(directories.map(async (dir) => {
-        let hasSubdirs = false
-        try {
-          const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
-          hasSubdirs = subItems.some(item => item.isDirectory)
-        } catch {
-          // If we can't read the directory, don't show expand chevron
-          hasSubdirs = false
-        }
-        
-        return {
-          path: dir.path,
-          name: dir.name,
-          isExpanded: expandedPaths.has(dir.path),
-          isLoading: false,
-          hasSubdirectories: hasSubdirs,
-          children: expandedPaths.has(dir.path) ? [] : undefined,
-        }
-      }))
+      const directoriesWithInfo = await Promise.all(
+        directories.map(async (dir) => {
+          let hasSubdirs = false
+          try {
+            const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
+            hasSubdirs = subItems.some((item) => item.isDirectory)
+          } catch {
+            // If we can't read the directory, don't show expand chevron
+            hasSubdirs = false
+          }
+
+          return {
+            path: dir.path,
+            name: dir.name,
+            isExpanded: expandedPaths.has(dir.path),
+            isLoading: false,
+            hasSubdirectories: hasSubdirs,
+            children: expandedPaths.has(dir.path) ? [] : undefined,
+          }
+        })
+      )
 
       setTreeData(directoriesWithInfo)
 
@@ -93,32 +94,33 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
   const loadChildren = async (path: string) => {
     try {
       const items = await window.electronAPI.fileSystem.readDirectory(path)
-      const directories = items
-        .filter((item) => item.isDirectory)
-      
+      const directories = items.filter((item) => item.isDirectory)
+
       // For each directory, check if it has subdirectories
-      const directoriesWithInfo = await Promise.all(directories.map(async (dir) => {
-        let hasSubdirs = false
-        try {
-          const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
-          hasSubdirs = subItems.some(item => item.isDirectory)
-        } catch {
-          // If we can't read the directory, don't show expand chevron
-          hasSubdirs = false
-        }
-        
-        return {
-          path: dir.path,
-          name: dir.name,
-          isExpanded: expandedPaths.has(dir.path),  // Preserve expansion state
-          isLoading: false,
-          hasSubdirectories: hasSubdirs,
-          children: expandedPaths.has(dir.path) ? [] : undefined,  // Load children if already expanded
-        }
-      }))
+      const directoriesWithInfo = await Promise.all(
+        directories.map(async (dir) => {
+          let hasSubdirs = false
+          try {
+            const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
+            hasSubdirs = subItems.some((item) => item.isDirectory)
+          } catch {
+            // If we can't read the directory, don't show expand chevron
+            hasSubdirs = false
+          }
+
+          return {
+            path: dir.path,
+            name: dir.name,
+            isExpanded: expandedPaths.has(dir.path), // Preserve expansion state
+            isLoading: false,
+            hasSubdirectories: hasSubdirs,
+            children: expandedPaths.has(dir.path) ? [] : undefined, // Load children if already expanded
+          }
+        })
+      )
 
       updateNodeChildren(path, directoriesWithInfo)
-      
+
       // Load children for any already expanded subdirectories
       for (const dir of directoriesWithInfo) {
         if (expandedPaths.has(dir.path)) {
@@ -158,7 +160,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
       newExpanded.delete(node.path)
       // Remove all paths that start with this node's path
       for (const expandedPath of newExpanded) {
-        if (expandedPath.startsWith(node.path + (node.path.endsWith('\\') ? '' : '\\'))) {
+        if (expandedPath.startsWith(node.path + (node.path.endsWith("\\") ? "" : "\\"))) {
           newExpanded.delete(expandedPath)
         }
       }
@@ -203,7 +205,7 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
               )}
             </div>
           ) : (
-            <div className="mr-1 p-0.5 w-4" /> 
+            <div className="mr-1 p-0.5 w-4" />
           )}
           {isExpanded ? (
             <FolderOpen className="mr-2 h-4 w-4 text-yellow-500" />

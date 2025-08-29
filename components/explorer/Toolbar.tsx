@@ -10,12 +10,12 @@ import {
   Grid3x3,
   List,
   TableProperties,
-  Search,
   Home,
   Settings,
 } from "lucide-react"
 import { ViewMode } from "@/types/explorer"
 import { getPathSegments } from "@/lib/fileUtils"
+import { SearchBar } from "./SearchBar"
 
 interface ToolbarProps {
   currentPath: string
@@ -27,6 +27,8 @@ interface ToolbarProps {
   onUp: () => void
   onRefresh: () => void
   onSettingsClick?: () => void
+  onSearch?: (query: string) => void
+  onClearSearch?: () => void
   canGoBack: boolean
   canGoForward: boolean
 }
@@ -41,6 +43,8 @@ export function Toolbar({
   onUp,
   onRefresh,
   onSettingsClick,
+  onSearch,
+  onClearSearch,
   canGoBack,
   canGoForward,
 }: ToolbarProps) {
@@ -149,9 +153,9 @@ export function Toolbar({
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefresh}>
             <RotateCw className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Search className="h-4 w-4" />
-          </Button>
+          {onSearch && onClearSearch && (
+            <SearchBar onSearch={onSearch} onClear={onClearSearch} className="mr-2" />
+          )}
           {onSettingsClick && (
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onSettingsClick}>
               <Settings className="h-4 w-4" />

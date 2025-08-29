@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
+import { ToastContainer } from "@/components/ui/toast"
+import { useToast } from "@/hooks/useToast"
+import { useKeyboardShortcuts, createFileExplorerShortcuts } from "@/hooks/useKeyboardShortcuts"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DrivesBar } from "@/components/explorer/DrivesBar"
@@ -16,7 +19,8 @@ import { SettingsModal } from "@/components/explorer/SettingsModal"
 import { FileItem, ViewMode } from "@/types/explorer"
 import { useSettings } from "@/hooks/useSettings"
 
-export default function Home() {
+function AppContent() {
+  const { toasts, removeToast } = useToast()
   const { settings, loading: settingsLoading, setSetting } = useSettings()
 
   const [currentPath, setCurrentPath] = useState<string>("")
@@ -25,12 +29,12 @@ export default function Home() {
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState<number>(-1)
   const [files, setFiles] = useState<FileItem[]>([])
-  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [dateSyncModalOpen, setDateSyncModalOpen] = useState(false)
   const [dateDifferenceModalOpen, setDateDifferenceModalOpen] = useState(false)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [searchQuery, setSearchQuery] = useState("")
   const [syncProgress, setSyncProgress] = useState({
     isProcessing: false,
     processedCount: 0,
@@ -106,7 +110,6 @@ export default function Home() {
 
     setCurrentPath(path)
     setSelectedFiles([])
-    setSelectedFile(null)
 
     // Save last path to settings
     setSetting("lastPath", path)
@@ -152,6 +155,57 @@ export default function Home() {
   const refresh = () => {
     loadFiles()
   }
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+  }
+
+  const handleClearSearch = () => {
+    setSearchQuery("")
+  }
+
+  // Keyboard shortcuts setup
+  const keyboardShortcuts = createFileExplorerShortcuts({
+    onBack: goBack,
+    onForward: goForward,
+    onUp: goUp,
+    onRefresh: refresh,
+    onSelectAll: () => {
+      if (isMultiSelectMode) {
+        // Select all visible files
+        const selectableFiles = files.filter((f) => f.name !== "..")
+        setSelectedFiles(selectableFiles.map((f) => f.path))
+      }
+    },
+    onToggleSearch: () => {
+      // Focus on search input - this will be handled by the SearchBar component
+      const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
+      if (searchInput) {
+        searchInput.focus()
+      }
+    },
+    onOpenSelected: () => {
+      if (selectedFiles.length === 1) {
+        const selectedFile = files.find((f) => f.path === selectedFiles[0])
+        if (selectedFile) {
+          if (selectedFile.isDirectory) {
+            navigateToPath(selectedFile.path)
+          } else {
+            window.electronAPI.fileSystem.openFile(selectedFile.path)
+          }
+        }
+      }
+    },
+    onToggleMultiSelect: () => {
+      setIsMultiSelectMode(!isMultiSelectMode)
+      if (isMultiSelectMode) {
+        setSelectedFiles([])
+      }
+    },
+    onSettings: () => setSettingsModalOpen(true),
+  })
+
+  useKeyboardShortcuts({ shortcuts: keyboardShortcuts })
 
   // Check if any selected files have encoded dates
   const hasFilesWithEncodedDates = () => {
@@ -299,7 +353,7 @@ export default function Home() {
   }
 
   return (
-    <ErrorBoundary>
+    <>
       <div className="flex h-screen flex-col bg-background text-foreground">
         {/* Toolbar */}
         <Toolbar
@@ -312,6 +366,8 @@ export default function Home() {
           onUp={goUp}
           onRefresh={refresh}
           onSettingsClick={() => setSettingsModalOpen(true)}
+          onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
           canGoBack={historyIndex > 0}
           canGoForward={historyIndex < history.length - 1}
         />
@@ -369,20 +425,20 @@ export default function Home() {
                 key={refreshKey}
                 path={currentPath}
                 viewMode={viewMode}
-                onFileSelect={setSelectedFile}
+                onFileSelect={() => {}} // Not used currently
                 onDirectoryOpen={navigateToPath}
                 selectedFiles={selectedFiles}
                 onSelectionChange={setSelectedFiles}
                 isMultiSelectMode={isMultiSelectMode}
-                files={files}
                 onFilesUpdate={setFiles}
+                searchQuery={searchQuery}
               />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
 
         {/* Status Bar */}
-        <StatusBar files={files} selectedCount={selectedFiles.length} currentPath={currentPath} />
+        <StatusBar files={files} selectedCount={selectedFiles.length} />
 
         {/* Date Sync Modal */}
         <DateSyncModal
@@ -417,6 +473,29 @@ export default function Home() {
         {/* Settings Modal */}
         <SettingsModal open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
       </div>
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
+  )
+}
+
+export default function Home() {
+  return (
+    <ErrorBoundary
+      componentName="Main Application"
+      showToast={true}
+      onError={(error, errorInfo) => {
+        // Log to console for debugging
+        console.error("Main app error:", error, errorInfo)
+
+        // In production, you might want to send this to an error reporting service
+        if (process.env.NODE_ENV === "production") {
+          // reportError(error, errorInfo)
+        }
+      }}
+    >
+      <AppContent />
     </ErrorBoundary>
   )
 }

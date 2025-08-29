@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { ViewMode, Theme } from "@/types/explorer"
 
 // Base validation schemas
 export const viewModeSchema = z.enum(["grid", "list", "details"] as const)
@@ -65,7 +64,7 @@ export function validateSettings(settings: unknown) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        errors: error.errors.map((err) => ({
+        errors: error.issues.map((err) => ({
           path: err.path.join("."),
           message: err.message,
           code: err.code,
@@ -89,7 +88,7 @@ export function validateSettingsFormData(formData: unknown) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        errors: error.errors.map((err) => ({
+        errors: error.issues.map((err) => ({
           path: err.path.join("."),
           message: err.message,
           code: err.code,
@@ -113,7 +112,7 @@ export function validateFileOperationResult(result: unknown) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        errors: error.errors.map((err) => ({
+        errors: error.issues.map((err) => ({
           path: err.path.join("."),
           message: err.message,
           code: err.code,
@@ -136,7 +135,7 @@ export type ValidatedFileOperationResult = z.infer<typeof fileOperationResultSch
 export interface ValidationError {
   path: string
   message: string
-  code: z.ZodIssueCode | "custom"
+  code: string
 }
 
 export interface ValidationResult<T> {

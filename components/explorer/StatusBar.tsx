@@ -7,10 +7,9 @@ import { FileVideo, Music, Image } from "lucide-react"
 interface StatusBarProps {
   files: FileItem[]
   selectedCount: number
-  currentPath: string
 }
 
-export function StatusBar({ files, selectedCount, currentPath }: StatusBarProps) {
+export function StatusBar({ files, selectedCount }: StatusBarProps) {
   const totalFiles = files.filter((f) => !f.isDirectory).length
   const totalFolders = files.filter((f) => f.isDirectory).length
 

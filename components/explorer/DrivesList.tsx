@@ -41,7 +41,6 @@ export function DrivesList({ onDriveSelect, selectedPath }: DrivesListProps) {
       {drives.map((drive) => {
         const isSelected = selectedPath.startsWith(drive.path)
         const usedSpace = drive.totalSize && drive.freeSpace ? drive.totalSize - drive.freeSpace : 0
-        const usagePercent = drive.totalSize ? (usedSpace / drive.totalSize) * 100 : 0
 
         return (
           <Button

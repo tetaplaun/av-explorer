@@ -90,7 +90,7 @@ export function useSettingsForm(): UseSettingsFormReturn {
     const result = validateSettingsFormData(formData)
 
     if (!result.success) {
-      setValidationErrors(result.errors!)
+      setValidationErrors([...result.errors!])
       return false
     }
 

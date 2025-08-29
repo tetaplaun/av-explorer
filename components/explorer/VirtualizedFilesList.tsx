@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useMemo } from "react"
 import { FileItem, ViewMode } from "@/types/explorer"
 import {
   getFileIcon,
@@ -12,11 +12,10 @@ import {
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Loader2, CornerLeftUp } from "lucide-react"
+import { CornerLeftUp } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
-import { VirtualizedFilesList } from "./VirtualizedFilesList"
 
-interface FilesListProps {
+interface VirtualizedFilesListProps {
   path: string
   viewMode: ViewMode
   onFileSelect: (file: FileItem) => void
@@ -24,11 +23,14 @@ interface FilesListProps {
   selectedFiles: string[]
   onSelectionChange: (files: string[]) => void
   isMultiSelectMode?: boolean
+  files?: FileItem[]
   onFilesUpdate?: (files: FileItem[]) => void
   searchQuery?: string
+  height?: number
+  itemHeight?: number
 }
 
-export function FilesList({
+export function VirtualizedFilesList({
   path,
   viewMode,
   onFileSelect,
@@ -36,145 +38,30 @@ export function FilesList({
   selectedFiles,
   onSelectionChange,
   isMultiSelectMode = false,
+  files: externalFiles = [],
   onFilesUpdate,
   searchQuery,
-}: FilesListProps) {
-  const [files, setFiles] = useState<FileItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [loadingEncodedDates, setLoadingEncodedDates] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [shouldUpdateParent, setShouldUpdateParent] = useState(false)
-
+  height = 600,
+  itemHeight = 40,
+}: VirtualizedFilesListProps) {
   // Filter files based on search query
-  const filteredFiles = files.filter((file) => {
+  const filteredFiles = useMemo(() => {
     if (!searchQuery || searchQuery.trim() === "") {
-      return true
+      return externalFiles
     }
 
     const query = searchQuery.toLowerCase().trim()
-    const fileName = file.name.toLowerCase()
-    const fileExtension = file.extension.toLowerCase()
+    return externalFiles.filter((file) => {
+      const fileName = file.name.toLowerCase()
+      const fileExtension = file.extension.toLowerCase()
 
-    // Search in filename, extension, and media type
-    return (
-      fileName.includes(query) ||
-      fileExtension.includes(query) ||
-      (file.mediaType && file.mediaType.toLowerCase().includes(query))
-    )
-  })
-
-  // Helper function to check if we're in a subdirectory (not at root)
-  const isInSubdirectory = () => {
-    if (!path) return false
-
-    // Check for Windows drive root (e.g., "C:\")
-    if (/^[A-Za-z]:\\?$/.test(path)) return false
-
-    // Check for Unix root
-    if (path === "/") return false
-
-    return true
-  }
-
-  // Helper function to get parent directory path
-  const getParentPath = () => {
-    const segments = path.split(/[\\/]/).filter(Boolean)
-    if (segments.length <= 1) return path // Already at root
-
-    segments.pop()
-    const isWindowsPath = /^[A-Za-z]:?$/.test(segments[0])
-    return isWindowsPath
-      ? segments.join("\\") + (segments.length === 1 ? "\\" : "")
-      : "/" + segments.join("/")
-  }
-
-  useEffect(() => {
-    loadFiles()
-  }, [path])
-
-  // Notify parent when files are updated
-  useEffect(() => {
-    if (shouldUpdateParent && onFilesUpdate) {
-      const filteredFiles = files.filter((f) => f.name !== "..")
-      onFilesUpdate(filteredFiles)
-      setShouldUpdateParent(false)
-    }
-  }, [files, shouldUpdateParent, onFilesUpdate])
-
-  const loadFiles = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const items = await window.electronAPI.fileSystem.readDirectory(path)
-
-      // Add parent directory entry if we're in a subdirectory
-      let displayItems = [...items]
-      if (isInSubdirectory()) {
-        const parentEntry: FileItem = {
-          name: "..",
-          path: getParentPath(),
-          isDirectory: true,
-          size: 0,
-          modified: null,
-          created: null,
-          extension: "",
-          mediaType: null,
-        }
-        displayItems = [parentEntry, ...items]
-      }
-
-      setFiles(displayItems)
-
-      // Mark that parent should be updated
-      if (onFilesUpdate) {
-        setShouldUpdateParent(true)
-      }
-
-      // Load encoded dates asynchronously after displaying the table
-      loadEncodedDates(items)
-    } catch (err) {
-      console.error("Failed to load files:", err)
-      setError("Failed to load directory")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadEncodedDates = async (items: FileItem[]) => {
-    // Only process media files
-    const mediaFiles = items.filter(
-      (item) =>
-        item.mediaType === "video" || item.mediaType === "audio" || item.mediaType === "image"
-    )
-
-    if (mediaFiles.length === 0) return
-
-    try {
-      setLoadingEncodedDates(true)
-      const encodedDates = await window.electronAPI.fileSystem.getEncodedDates(mediaFiles)
-
-      // Update files with encoded dates
-      setFiles((prevFiles) =>
-        prevFiles.map((file) => {
-          const encodedDate = encodedDates[file.path]
-          if (encodedDate) {
-            return { ...file, encodedDate }
-          }
-          return file
-        })
+      return (
+        fileName.includes(query) ||
+        fileExtension.includes(query) ||
+        (file.mediaType && file.mediaType.toLowerCase().includes(query))
       )
-
-      // Mark that parent should be updated
-      if (onFilesUpdate) {
-        setShouldUpdateParent(true)
-      }
-    } catch (err) {
-      console.error("Failed to load encoded dates:", err)
-      // Don't show error to user, just silently fail for encoded dates
-    } finally {
-      setLoadingEncodedDates(false)
-    }
-  }
+    })
+  }, [externalFiles, searchQuery])
 
   const handleItemClick = (item: FileItem, e: React.MouseEvent) => {
     if (e.detail === 2) {
@@ -208,63 +95,6 @@ export function FilesList({
       ? selectedFiles.filter((p) => p !== filePath)
       : [...selectedFiles, filePath]
     onSelectionChange(newSelection)
-  }
-
-  const handleSelectAll = () => {
-    const selectableFiles = filteredFiles.filter((f) => f.name !== "..")
-    const allSelectablePaths = selectableFiles.map((f) => f.path)
-
-    // Check if all selectable files are currently selected
-    const allSelected =
-      selectableFiles.length > 0 && selectableFiles.every((f) => selectedFiles.includes(f.path))
-
-    if (allSelected) {
-      // If all selected, deselect all
-      onSelectionChange([])
-    } else {
-      // Select all files (excluding ".." parent entry)
-      onSelectionChange(allSelectablePaths)
-    }
-  }
-
-  const isAllSelected =
-    filteredFiles.length > 0 &&
-    filteredFiles.filter((f) => f.name !== "..").every((f) => selectedFiles.includes(f.path))
-  const isIndeterminate = selectedFiles.length > 0 && !isAllSelected
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-destructive">{error}</p>
-      </div>
-    )
-  }
-
-  // Use virtualization for large lists
-  if (filteredFiles.length > 100) {
-    return (
-      <VirtualizedFilesList
-        path={path}
-        viewMode={viewMode}
-        onFileSelect={onFileSelect}
-        onDirectoryOpen={onDirectoryOpen}
-        selectedFiles={selectedFiles}
-        onSelectionChange={onSelectionChange}
-        isMultiSelectMode={isMultiSelectMode}
-        files={filteredFiles}
-        onFilesUpdate={onFilesUpdate}
-        searchQuery={searchQuery}
-        height={600}
-      />
-    )
   }
 
   if (viewMode === "grid") {
@@ -301,41 +131,40 @@ export function FilesList({
                   </div>
                 )}
                 <Icon className={cn("mb-2 h-12 w-12", iconColor)} />
-                {(() => {
-                  if (isParentDir) {
+                {isParentDir ? (
+                  <TooltipProvider>
+                    <Tooltip delayDuration={500}>
+                      <TooltipTrigger asChild>
+                        <span className="text-center text-xs text-foreground block max-w-full">
+                          ..
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Go to parent directory</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  (() => {
+                    const { display, needsTooltip } = truncateFilename(file.name, 20)
                     return (
                       <TooltipProvider>
                         <Tooltip delayDuration={500}>
                           <TooltipTrigger asChild>
                             <span className="text-center text-xs text-foreground block max-w-full">
-                              ..
+                              {display}
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Go to parent directory</p>
-                          </TooltipContent>
+                          {needsTooltip && (
+                            <TooltipContent>
+                              <p className="max-w-xs break-all">{file.name}</p>
+                            </TooltipContent>
+                          )}
                         </Tooltip>
                       </TooltipProvider>
                     )
-                  }
-                  const { display, needsTooltip } = truncateFilename(file.name, 20)
-                  return (
-                    <TooltipProvider>
-                      <Tooltip delayDuration={500}>
-                        <TooltipTrigger asChild>
-                          <span className="text-center text-xs text-foreground block max-w-full">
-                            {display}
-                          </span>
-                        </TooltipTrigger>
-                        {needsTooltip && (
-                          <TooltipContent>
-                            <p className="max-w-xs break-all">{file.name}</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  )
-                })()}
+                  })()
+                )}
               </div>
             )
           })}
@@ -376,37 +205,36 @@ export function FilesList({
                   />
                 )}
                 <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
-                {(() => {
-                  if (isParentDir) {
+                {isParentDir ? (
+                  <TooltipProvider>
+                    <Tooltip delayDuration={500}>
+                      <TooltipTrigger asChild>
+                        <span className="flex-1 text-sm text-foreground">..</span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Go to parent directory</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  (() => {
+                    const { display, needsTooltip } = truncateFilename(file.name, 40)
                     return (
                       <TooltipProvider>
                         <Tooltip delayDuration={500}>
                           <TooltipTrigger asChild>
-                            <span className="flex-1 text-sm text-foreground">..</span>
+                            <span className="flex-1 text-sm text-foreground">{display}</span>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Go to parent directory</p>
-                          </TooltipContent>
+                          {needsTooltip && (
+                            <TooltipContent>
+                              <p className="max-w-md break-all">{file.name}</p>
+                            </TooltipContent>
+                          )}
                         </Tooltip>
                       </TooltipProvider>
                     )
-                  }
-                  const { display, needsTooltip } = truncateFilename(file.name, 40)
-                  return (
-                    <TooltipProvider>
-                      <Tooltip delayDuration={500}>
-                        <TooltipTrigger asChild>
-                          <span className="flex-1 text-sm text-foreground">{display}</span>
-                        </TooltipTrigger>
-                        {needsTooltip && (
-                          <TooltipContent>
-                            <p className="max-w-md break-all">{file.name}</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  )
-                })()}
+                  })()
+                )}
                 {!file.isDirectory && !isParentDir && (
                   <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
                 )}
@@ -427,8 +255,21 @@ export function FilesList({
             {isMultiSelectMode && (
               <th className="px-4 py-2 w-10">
                 <Checkbox
-                  checked={isAllSelected ? true : isIndeterminate ? "indeterminate" : false}
-                  onCheckedChange={handleSelectAll}
+                  checked={
+                    filteredFiles.length > 0 &&
+                    filteredFiles
+                      .filter((f) => f.name !== "..")
+                      .every((f) => selectedFiles.includes(f.path))
+                  }
+                  onCheckedChange={() => {
+                    const selectableFiles = filteredFiles.filter((f) => f.name !== "..")
+                    const allSelected = selectableFiles.every((f) => selectedFiles.includes(f.path))
+                    if (allSelected) {
+                      onSelectionChange([])
+                    } else {
+                      onSelectionChange(selectableFiles.map((f) => f.path))
+                    }
+                  }}
                 />
               </th>
             )}
@@ -455,8 +296,7 @@ export function FilesList({
               <tr
                 key={file.path}
                 className={cn(
-                  "cursor-pointer border-b border-border select-none",
-                  "hover:bg-muted",
+                  "cursor-pointer border-b border-border select-none hover:bg-muted",
                   isSelected && "bg-muted"
                 )}
                 onClick={(e) => handleItemClick(file, e)}
@@ -528,13 +368,8 @@ export function FilesList({
                     "-"
                   ) : file.encodedDate ? (
                     formatDateTime(file.encodedDate)
-                  ) : loadingEncodedDates &&
-                    (file.mediaType === "video" ||
-                      file.mediaType === "audio" ||
-                      file.mediaType === "image") ? (
-                    <span className="text-xs">Loading...</span>
                   ) : (
-                    "-"
+                    <span className="text-xs">Loading...</span>
                   )}
                 </td>
               </tr>

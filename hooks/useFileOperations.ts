@@ -85,7 +85,7 @@ export function useFileOperations(initialPath?: string): UseFileOperationsReturn
 
       if (result) {
         // Load encoded dates asynchronously after displaying files
-        loadEncodedDates(result.filter((item) => item.name !== ".."))
+        loadEncodedDates(result.filter((item: FileItem) => item.name !== ".."))
       }
     },
     [loadFilesOperation]
