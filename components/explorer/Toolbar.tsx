@@ -12,6 +12,7 @@ import {
   TableProperties,
   Search,
   Home,
+  Settings,
 } from "lucide-react"
 import { ViewMode } from "@/types/explorer"
 import { getPathSegments } from "@/lib/fileUtils"
@@ -25,6 +26,7 @@ interface ToolbarProps {
   onForward: () => void
   onUp: () => void
   onRefresh: () => void
+  onSettingsClick?: () => void
   canGoBack: boolean
   canGoForward: boolean
 }
@@ -38,6 +40,7 @@ export function Toolbar({
   onForward,
   onUp,
   onRefresh,
+  onSettingsClick,
   canGoBack,
   canGoForward,
 }: ToolbarProps) {
@@ -149,6 +152,11 @@ export function Toolbar({
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <Search className="h-4 w-4" />
           </Button>
+          {onSettingsClick && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onSettingsClick}>
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

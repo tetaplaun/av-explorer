@@ -38,12 +38,33 @@ export interface ExplorerState {
   sortOrder: 'asc' | 'desc'
 }
 
+export interface AppSettings {
+  viewMode: ViewMode
+  lastPath: string
+  windowBounds: { width: number; height: number; x?: number; y?: number }
+  sidebarWidth: number
+  dateSyncDefaults: {
+    setCreationDate: boolean
+    setModifiedDate: boolean
+  }
+  dateDifferenceDefaults: {
+    checkCreationDate: boolean
+    checkModifiedDate: boolean
+    maxDifferenceInDays: number
+  }
+}
+
 declare global {
   interface Window {
     electronAPI: {
       getAppInfo: () => Promise<{ name: string; version: string }>
       sendMessage: (channel: string, data: any) => void
       onMessage: (channel: string, func: (...args: any[]) => void) => void
+      settings: {
+        get: <K extends keyof AppSettings>(key: K) => Promise<AppSettings[K]>
+        set: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<void>
+        getAll: () => Promise<AppSettings>
+      }
       fileSystem: {
         getDrives: () => Promise<DriveInfo[]>
         readDirectory: (path: string) => Promise<FileItem[]>

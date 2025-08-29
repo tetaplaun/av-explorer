@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CalendarClock, AlertCircle, Loader2, CheckCircle, XCircle } from "lucide-react"
+import { useSettings } from "@/hooks/useSettings"
 
 interface DateSyncModalProps {
   open: boolean
@@ -34,8 +35,17 @@ export function DateSyncModal({
   successCount = 0,
   failureCount = 0,
 }: DateSyncModalProps) {
+  const { settings } = useSettings()
   const [setCreationDate, setSetCreationDate] = useState(true)
   const [setModifiedDate, setSetModifiedDate] = useState(true)
+  
+  // Load defaults from settings when modal opens
+  useEffect(() => {
+    if (open && settings?.dateSyncDefaults) {
+      setSetCreationDate(settings.dateSyncDefaults.setCreationDate)
+      setSetModifiedDate(settings.dateSyncDefaults.setModifiedDate)
+    }
+  }, [open, settings])
   
   const isComplete = isProcessing && processedCount === selectedCount
 

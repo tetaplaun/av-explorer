@@ -11,9 +11,13 @@ import { StatusBar } from "@/components/explorer/StatusBar"
 import { FileActionsBar } from "@/components/explorer/FileActionsBar"
 import { DateSyncModal } from "@/components/explorer/DateSyncModal"
 import { DateDifferenceModal } from "@/components/explorer/DateDifferenceModal"
+import { SettingsModal } from "@/components/explorer/SettingsModal"
 import { FileItem, ViewMode } from "@/types/explorer"
+import { useSettings } from "@/hooks/useSettings"
 
 export default function Home() {
+  const { settings, loading: settingsLoading, setSetting } = useSettings()
+  
   const [currentPath, setCurrentPath] = useState<string>("")
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
@@ -24,6 +28,7 @@ export default function Home() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [dateSyncModalOpen, setDateSyncModalOpen] = useState(false)
   const [dateDifferenceModalOpen, setDateDifferenceModalOpen] = useState(false)
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [syncProgress, setSyncProgress] = useState({
     isProcessing: false,
@@ -32,13 +37,31 @@ export default function Home() {
     failureCount: 0
   })
 
-  // Initialize with first drive on mount
+  // Initialize with settings when loaded
   useEffect(() => {
-    initializePath()
-  }, [])
+    if (!settingsLoading && settings) {
+      // Load saved view mode
+      if (settings.viewMode) {
+        setViewMode(settings.viewMode)
+      }
+      
+      // Initialize path
+      initializePath()
+    }
+  }, [settingsLoading, settings])
 
   const initializePath = async () => {
     try {
+      // Try to use saved last path first
+      if (settings?.lastPath) {
+        const pathInfo = await window.electronAPI.fileSystem.getPathInfo(settings.lastPath)
+        if (pathInfo.exists && pathInfo.isDirectory) {
+          navigateToPath(settings.lastPath)
+          return
+        }
+      }
+      
+      // Fall back to first drive
       const drives = await window.electronAPI.fileSystem.getDrives()
       if (drives.length > 0) {
         navigateToPath(drives[0].path)
@@ -83,6 +106,15 @@ export default function Home() {
     setCurrentPath(path)
     setSelectedFiles([])
     setSelectedFile(null)
+    
+    // Save last path to settings
+    setSetting('lastPath', path)
+  }
+  
+  // Handle view mode changes
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode)
+    setSetting('viewMode', mode)
   }
 
   const goBack = () => {
@@ -265,12 +297,13 @@ export default function Home() {
       <Toolbar
         currentPath={currentPath}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         onNavigate={navigateToPath}
         onBack={goBack}
         onForward={goForward}
         onUp={goUp}
         onRefresh={refresh}
+        onSettingsClick={() => setSettingsModalOpen(true)}
         canGoBack={historyIndex > 0}
         canGoForward={historyIndex < history.length - 1}
       />
@@ -371,6 +404,12 @@ export default function Home() {
         open={dateDifferenceModalOpen}
         onOpenChange={setDateDifferenceModalOpen}
         onConfirm={handleSelectDateDifferences}
+      />
+      
+      {/* Settings Modal */}
+      <SettingsModal
+        open={settingsModalOpen}
+        onOpenChange={setSettingsModalOpen}
       />
     </div>
   )

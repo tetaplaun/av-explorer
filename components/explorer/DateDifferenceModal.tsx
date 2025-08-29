@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CalendarSearch } from "lucide-react"
+import { useSettings } from "@/hooks/useSettings"
 
 interface DateDifferenceModalProps {
   open: boolean
@@ -28,9 +29,19 @@ export function DateDifferenceModal({
   onOpenChange,
   onConfirm,
 }: DateDifferenceModalProps) {
+  const { settings } = useSettings()
   const [checkCreationDate, setCheckCreationDate] = useState(true)
   const [checkModifiedDate, setCheckModifiedDate] = useState(true)
   const [maxDifferenceInDays, setMaxDifferenceInDays] = useState(1)
+  
+  // Load defaults from settings when modal opens
+  useEffect(() => {
+    if (open && settings?.dateDifferenceDefaults) {
+      setCheckCreationDate(settings.dateDifferenceDefaults.checkCreationDate)
+      setCheckModifiedDate(settings.dateDifferenceDefaults.checkModifiedDate)
+      setMaxDifferenceInDays(settings.dateDifferenceDefaults.maxDifferenceInDays)
+    }
+  }, [open, settings])
 
   const handleConfirm = () => {
     if (!checkCreationDate && !checkModifiedDate) {

@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on(channel, (event, ...args) => func(...args))
     }
   },
+  // Settings APIs
+  settings: {
+    get: (key) => ipcRenderer.invoke('settings-get', key),
+    set: (key, value) => ipcRenderer.invoke('settings-set', key, value),
+    getAll: () => ipcRenderer.invoke('settings-get-all')
+  },
   // File System APIs
   fileSystem: {
     getDrives: () => ipcRenderer.invoke('get-drives'),

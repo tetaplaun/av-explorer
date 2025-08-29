@@ -7,6 +7,32 @@ const execPromise = promisify(exec)
 const execFilePromise = promisify(execFile)
 const isDev = process.env.NODE_ENV === 'development'
 
+// Import electron-store with dynamic import for ESM compatibility
+let Store
+let store
+
+async function initializeStore() {
+  const module = await import('electron-store')
+  Store = module.default
+  store = new Store({
+    defaults: {
+      viewMode: 'grid',
+      lastPath: '',
+      windowBounds: { width: 1200, height: 800 },
+      sidebarWidth: 25,
+      dateSyncDefaults: {
+        setCreationDate: true,
+        setModifiedDate: true
+      },
+      dateDifferenceDefaults: {
+        checkCreationDate: true,
+        checkModifiedDate: true,
+        maxDifferenceInDays: 1
+      }
+    }
+  })
+}
+
 let mainWindow
 
 // Drive cache to avoid repeated detection attempts
@@ -17,10 +43,17 @@ let driveCache = {
   errorLogged: false // Track if we've logged an error this session
 }
 
-function createWindow() {
+async function createWindow() {
+  // Ensure store is initialized
+  if (!store) {
+    await initializeStore()
+  }
+  
+  // Get saved window bounds
+  const bounds = store.get('windowBounds')
+  
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    ...bounds,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -37,6 +70,13 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../out/index.html'))
   }
 
+  // Save window bounds before closing
+  mainWindow.on('close', () => {
+    if (!mainWindow.isMaximized() && !mainWindow.isMinimized()) {
+      store.set('windowBounds', mainWindow.getBounds())
+    }
+  })
+  
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -61,6 +101,28 @@ ipcMain.handle('app-info', () => {
     name: app.getName(),
     version: app.getVersion()
   }
+})
+
+// Settings handlers
+ipcMain.handle('settings-get', async (event, key) => {
+  if (!store) {
+    await initializeStore()
+  }
+  return store.get(key)
+})
+
+ipcMain.handle('settings-set', async (event, key, value) => {
+  if (!store) {
+    await initializeStore()
+  }
+  store.set(key, value)
+})
+
+ipcMain.handle('settings-get-all', async () => {
+  if (!store) {
+    await initializeStore()
+  }
+  return store.store
 })
 
 // File System Operations
