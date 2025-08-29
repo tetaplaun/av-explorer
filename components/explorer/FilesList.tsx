@@ -6,7 +6,7 @@ import { getFileIcon, getFileIconColor, formatFileSize, formatDate, formatDateTi
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Loader2 } from "lucide-react"
+import { Loader2, CornerLeftUp } from "lucide-react"
 
 interface FilesListProps {
   path: string
@@ -30,6 +30,31 @@ export function FilesList({
   const [loadingEncodedDates, setLoadingEncodedDates] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Helper function to check if we're in a subdirectory (not at root)
+  const isInSubdirectory = () => {
+    if (!path) return false
+    
+    // Check for Windows drive root (e.g., "C:\")
+    if (/^[A-Za-z]:\\?$/.test(path)) return false
+    
+    // Check for Unix root
+    if (path === '/') return false
+    
+    return true
+  }
+
+  // Helper function to get parent directory path
+  const getParentPath = () => {
+    const segments = path.split(/[\\/]/).filter(Boolean)
+    if (segments.length <= 1) return path // Already at root
+    
+    segments.pop()
+    const isWindowsPath = /^[A-Za-z]:?$/.test(segments[0])
+    return isWindowsPath
+      ? segments.join("\\") + (segments.length === 1 ? "\\" : "")
+      : "/" + segments.join("/")
+  }
+
   useEffect(() => {
     loadFiles()
   }, [path])
@@ -39,7 +64,24 @@ export function FilesList({
       setLoading(true)
       setError(null)
       const items = await window.electronAPI.fileSystem.readDirectory(path)
-      setFiles(items)
+      
+      // Add parent directory entry if we're in a subdirectory
+      let displayItems = [...items]
+      if (isInSubdirectory()) {
+        const parentEntry: FileItem = {
+          name: "..",
+          path: getParentPath(),
+          isDirectory: true,
+          size: 0,
+          modified: null,
+          created: null,
+          extension: "",
+          mediaType: null
+        }
+        displayItems = [parentEntry, ...items]
+      }
+      
+      setFiles(displayItems)
       
       // Load encoded dates asynchronously after displaying the table
       loadEncodedDates(items)
@@ -128,8 +170,13 @@ export function FilesList({
       <ScrollArea className="h-full">
         <div className="grid grid-cols-4 gap-4 p-4 lg:grid-cols-6 xl:grid-cols-8">
           {files.map((file) => {
-            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
-            const iconColor = getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
+            const isParentDir = file.name === ".."
+            const Icon = isParentDir 
+              ? CornerLeftUp 
+              : getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
+            const iconColor = isParentDir 
+              ? "text-muted-foreground" 
+              : getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
             const isSelected = selectedFiles.includes(file.path)
 
             return (
@@ -144,6 +191,22 @@ export function FilesList({
               >
                 <Icon className={cn("mb-2 h-12 w-12", iconColor)} />
                 {(() => {
+                  if (isParentDir) {
+                    return (
+                      <TooltipProvider>
+                        <Tooltip delayDuration={500}>
+                          <TooltipTrigger asChild>
+                            <span className="text-center text-xs text-foreground block max-w-full">
+                              ..
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Go to parent directory</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )
+                  }
                   const { display, needsTooltip } = truncateFilename(file.name, 20)
                   return (
                     <TooltipProvider>
@@ -175,8 +238,13 @@ export function FilesList({
       <ScrollArea className="h-full">
         <div className="space-y-1 p-2">
           {files.map((file) => {
-            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
-            const iconColor = getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
+            const isParentDir = file.name === ".."
+            const Icon = isParentDir 
+              ? CornerLeftUp 
+              : getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
+            const iconColor = isParentDir 
+              ? "text-muted-foreground" 
+              : getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
             const isSelected = selectedFiles.includes(file.path)
 
             return (
@@ -191,6 +259,20 @@ export function FilesList({
               >
                 <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
                 {(() => {
+                  if (isParentDir) {
+                    return (
+                      <TooltipProvider>
+                        <Tooltip delayDuration={500}>
+                          <TooltipTrigger asChild>
+                            <span className="flex-1 text-sm text-foreground">..</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Go to parent directory</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )
+                  }
                   const { display, needsTooltip } = truncateFilename(file.name, 40)
                   return (
                     <TooltipProvider>
@@ -207,7 +289,7 @@ export function FilesList({
                     </TooltipProvider>
                   )
                 })()}
-                {!file.isDirectory && (
+                {!file.isDirectory && !isParentDir && (
                   <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
                 )}
               </div>
@@ -234,8 +316,13 @@ export function FilesList({
         </thead>
         <tbody>
           {files.map((file) => {
-            const Icon = getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
-            const iconColor = getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
+            const isParentDir = file.name === ".."
+            const Icon = isParentDir 
+              ? CornerLeftUp 
+              : getFileIcon(file.extension, file.isDirectory, file.mediaType, file.name)
+            const iconColor = isParentDir 
+              ? "text-muted-foreground" 
+              : getFileIconColor(file.mediaType, file.extension, file.isDirectory, file.name)
             const isSelected = selectedFiles.includes(file.path)
 
             return (
@@ -252,6 +339,20 @@ export function FilesList({
                   <div className="flex items-center gap-2 min-w-0">
                     <Icon className={cn("h-4 w-4 flex-shrink-0", iconColor)} />
                     {(() => {
+                      if (isParentDir) {
+                        return (
+                          <TooltipProvider>
+                            <Tooltip delayDuration={500}>
+                              <TooltipTrigger asChild>
+                                <span className="text-sm text-foreground">..</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Go to parent directory</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )
+                      }
                       const { display, needsTooltip } = truncateFilename(file.name, 50)
                       return (
                         <TooltipProvider>
@@ -271,19 +372,19 @@ export function FilesList({
                   </div>
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {file.isDirectory ? "Folder" : file.mediaType || "File"}
+                  {isParentDir ? "Parent Directory" : file.isDirectory ? "Folder" : file.mediaType || "File"}
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {file.isDirectory ? "-" : formatFileSize(file.size)}
+                  {isParentDir || file.isDirectory ? "-" : formatFileSize(file.size)}
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {formatDateTime(file.created)}
+                  {isParentDir ? "-" : formatDateTime(file.created)}
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {formatDateTime(file.modified)}
+                  {isParentDir ? "-" : formatDateTime(file.modified)}
                 </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">
-                  {file.encodedDate ? (
+                  {isParentDir ? "-" : file.encodedDate ? (
                     formatDateTime(file.encodedDate)
                   ) : (
                     loadingEncodedDates && (file.mediaType === 'video' || file.mediaType === 'audio' || file.mediaType === 'image') ? (
