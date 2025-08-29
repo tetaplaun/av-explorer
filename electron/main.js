@@ -378,3 +378,84 @@ ipcMain.handle('show-item-in-folder', async (event, filePath) => {
     return { success: false, error: error.message }
   }
 })
+
+// Set file dates based on encoded date
+ipcMain.handle('set-file-dates', async (event, files, options) => {
+  const results = []
+  
+  for (const file of files) {
+    try {
+      // Use the encoded date if it's already provided, otherwise fetch it
+      let encodedDate = file.encodedDate ? new Date(file.encodedDate) : null
+      
+      if (!encodedDate) {
+        encodedDate = await getEncodedDate(file.path)
+      }
+      
+      if (!encodedDate) {
+        results.push({
+          path: file.path,
+          success: false,
+          error: 'No encoded date found'
+        })
+        continue
+      }
+      
+      // Get current stats to preserve unchanged times
+      const stats = await fs.stat(file.path)
+      
+      // Determine which dates to update
+      const newAccessTime = options.setModifiedDate ? encodedDate : stats.atime
+      const newModifiedTime = options.setModifiedDate ? encodedDate : stats.mtime
+      
+      // Update file times (atime and mtime)
+      // fs.utimes accepts Date objects or timestamps
+      await fs.utimes(file.path, newAccessTime, newModifiedTime)
+      
+      // For creation date on Windows, we need to use a different approach
+      // Node.js fs doesn't support changing birthtime/creation date directly
+      if (options.setCreationDate && process.platform === 'win32') {
+        try {
+          // Use PowerShell to set creation time on Windows
+          const dateStr = encodedDate.toISOString()
+          
+          // Build PowerShell command with proper escaping
+          // Use double quotes for the path and escape any internal quotes
+          const escapedPath = file.path.replace(/"/g, '`"')
+          
+          // PowerShell command using single quotes for the date string
+          const psCmd = `(Get-Item -LiteralPath "${escapedPath}").CreationTime = [DateTime]'${dateStr}'`
+          
+          console.log(`Executing PowerShell command: ${psCmd}`)
+          
+          const { stdout, stderr } = await execPromise(`powershell -NoProfile -NonInteractive -Command "${psCmd}"`, { 
+            timeout: 5000, 
+            windowsHide: true 
+          })
+          
+          if (stderr) {
+            console.error(`PowerShell stderr for ${file.path}:`, stderr)
+          }
+        } catch (psError) {
+          console.error(`PowerShell error for ${file.path}:`, psError.message)
+          // Don't fail the whole operation if just creation date fails
+          // The modified date was still updated successfully
+        }
+      }
+      
+      results.push({
+        path: file.path,
+        success: true
+      })
+    } catch (error) {
+      console.error(`Error updating ${file.path}:`, error)
+      results.push({
+        path: file.path,
+        success: false,
+        error: error.message
+      })
+    }
+  }
+  
+  return results
+})

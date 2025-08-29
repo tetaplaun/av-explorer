@@ -9,6 +9,7 @@ import { FilesList } from "@/components/explorer/FilesList"
 import { Toolbar } from "@/components/explorer/Toolbar"
 import { StatusBar } from "@/components/explorer/StatusBar"
 import { FileActionsBar } from "@/components/explorer/FileActionsBar"
+import { DateSyncModal } from "@/components/explorer/DateSyncModal"
 import { FileItem, ViewMode } from "@/types/explorer"
 
 export default function Home() {
@@ -20,6 +21,8 @@ export default function Home() {
   const [files, setFiles] = useState<FileItem[]>([])
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
+  const [dateSyncModalOpen, setDateSyncModalOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Initialize with first drive on mount
   useEffect(() => {
@@ -109,6 +112,56 @@ export default function Home() {
     loadFiles()
   }
 
+  // Check if any selected files have encoded dates
+  const hasFilesWithEncodedDates = () => {
+    if (selectedFiles.length === 0) return false
+    return selectedFiles.some(filePath => {
+      const file = files.find(f => f.path === filePath)
+      return file && file.encodedDate
+    })
+  }
+
+  const handleSyncDates = async (options: { setCreationDate: boolean; setModifiedDate: boolean }) => {
+    // Get selected files that have encoded dates
+    const filesToSync = selectedFiles
+      .map(filePath => files.find(f => f.path === filePath))
+      .filter(file => file && file.encodedDate)
+
+    if (filesToSync.length === 0) return
+
+    try {
+      const results = await window.electronAPI.fileSystem.setFileDates(filesToSync, options)
+      
+      // Check results
+      const successCount = results.filter(r => r.success).length
+      const failCount = results.filter(r => !r.success).length
+      
+      if (failCount > 0) {
+        const failures = results.filter(r => !r.success)
+        console.error(`Failed to update ${failCount} files:`)
+        failures.forEach(f => {
+          console.error(`  - ${f.path}: ${f.error}`)
+        })
+      }
+      
+      if (successCount > 0) {
+        console.log(`Successfully updated ${successCount} files`)
+        // Save current selection
+        const currentSelection = [...selectedFiles]
+        
+        // Force refresh the file list to show updated dates
+        setRefreshKey(prev => prev + 1)
+        
+        // Restore selection after component remounts
+        setTimeout(() => {
+          setSelectedFiles(currentSelection)
+        }, 50)
+      }
+    } catch (error) {
+      console.error('Error syncing dates:', error)
+    }
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Toolbar */}
@@ -136,6 +189,8 @@ export default function Home() {
           }
         }}
         selectedCount={selectedFiles.length}
+        hasFilesWithEncodedDates={hasFilesWithEncodedDates()}
+        onSyncDates={() => setDateSyncModalOpen(true)}
       />
 
       {/* Drives Bar (below file actions) */}
@@ -172,6 +227,7 @@ export default function Home() {
         <ResizablePanel defaultSize={75}>
           <div className="flex h-full flex-col bg-background">
             <FilesList
+              key={refreshKey}
               path={currentPath}
               viewMode={viewMode}
               onFileSelect={setSelectedFile}
@@ -180,6 +236,7 @@ export default function Home() {
               onSelectionChange={setSelectedFiles}
               isMultiSelectMode={isMultiSelectMode}
               files={files}
+              onFilesUpdate={setFiles}
             />
           </div>
         </ResizablePanel>
@@ -187,6 +244,14 @@ export default function Home() {
 
       {/* Status Bar */}
       <StatusBar files={files} selectedCount={selectedFiles.length} currentPath={currentPath} />
+      
+      {/* Date Sync Modal */}
+      <DateSyncModal
+        open={dateSyncModalOpen}
+        onOpenChange={setDateSyncModalOpen}
+        selectedCount={selectedFiles.length}
+        onConfirm={handleSyncDates}
+      />
     </div>
   )
 }

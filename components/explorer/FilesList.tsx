@@ -18,6 +18,7 @@ interface FilesListProps {
   onSelectionChange: (files: string[]) => void
   isMultiSelectMode?: boolean
   files?: FileItem[]
+  onFilesUpdate?: (files: FileItem[]) => void
 }
 
 export function FilesList({
@@ -29,11 +30,13 @@ export function FilesList({
   onSelectionChange,
   isMultiSelectMode = false,
   files: externalFiles,
+  onFilesUpdate,
 }: FilesListProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingEncodedDates, setLoadingEncodedDates] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [shouldUpdateParent, setShouldUpdateParent] = useState(false)
 
   // Helper function to check if we're in a subdirectory (not at root)
   const isInSubdirectory = () => {
@@ -64,6 +67,15 @@ export function FilesList({
     loadFiles()
   }, [path])
 
+  // Notify parent when files are updated
+  useEffect(() => {
+    if (shouldUpdateParent && onFilesUpdate) {
+      const filteredFiles = files.filter(f => f.name !== "..")
+      onFilesUpdate(filteredFiles)
+      setShouldUpdateParent(false)
+    }
+  }, [files, shouldUpdateParent, onFilesUpdate])
+
   const loadFiles = async () => {
     try {
       setLoading(true)
@@ -87,6 +99,11 @@ export function FilesList({
       }
       
       setFiles(displayItems)
+      
+      // Mark that parent should be updated
+      if (onFilesUpdate) {
+        setShouldUpdateParent(true)
+      }
       
       // Load encoded dates asynchronously after displaying the table
       loadEncodedDates(items)
@@ -122,6 +139,11 @@ export function FilesList({
           return file
         })
       )
+      
+      // Mark that parent should be updated
+      if (onFilesUpdate) {
+        setShouldUpdateParent(true)
+      }
     } catch (err) {
       console.error("Failed to load encoded dates:", err)
       // Don't show error to user, just silently fail for encoded dates

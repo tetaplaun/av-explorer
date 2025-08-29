@@ -9,7 +9,8 @@ import {
   Clipboard, 
   Trash2,
   FolderInput,
-  FileEdit
+  FileEdit,
+  CalendarClock
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -18,24 +19,28 @@ interface FileActionsBarProps {
   isMultiSelectMode: boolean
   onMultiSelectToggle: () => void
   selectedCount: number
+  hasFilesWithEncodedDates?: boolean
   onCopy?: () => void
   onCut?: () => void
   onPaste?: () => void
   onDelete?: () => void
   onRename?: () => void
   onMove?: () => void
+  onSyncDates?: () => void
 }
 
 export function FileActionsBar({
   isMultiSelectMode,
   onMultiSelectToggle,
   selectedCount,
+  hasFilesWithEncodedDates = false,
   onCopy,
   onCut,
   onPaste,
   onDelete,
   onRename,
-  onMove
+  onMove,
+  onSyncDates
 }: FileActionsBarProps) {
   const hasSelection = selectedCount > 0
   const singleSelection = selectedCount === 1
@@ -61,6 +66,26 @@ export function FileActionsBar({
             </TooltipTrigger>
             <TooltipContent>
               <p>{isMultiSelectMode ? "Exit selection mode" : "Enter selection mode"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Date Sync Button */}
+        <TooltipProvider>
+          <Tooltip delayDuration={500}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSyncDates}
+                disabled={!hasSelection || !hasFilesWithEncodedDates || !onSyncDates}
+                className="h-8 px-2"
+              >
+                <CalendarClock className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Sync dates with encoded date</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
