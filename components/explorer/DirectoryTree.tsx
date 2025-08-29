@@ -33,25 +33,18 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
     }
   }, [rootPath])
 
-  // Expand tree to show selected path when it changes
-  useEffect(() => {
-    if (selectedPath && selectedPath.trim() !== "") {
-      expandToPath(selectedPath)
-    }
-  }, [selectedPath])
+  // Removed automatic expansion - directories only expand when user clicks
 
-  // Scroll to selected node when it changes
+  // Scroll to selected node if it's visible in the tree
   useEffect(() => {
     if (selectedNodeRef.current && containerRef.current) {
-      // Small delay to ensure DOM is updated after expansion
-      setTimeout(() => {
-        selectedNodeRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        })
-      }, 100)
+      // Only scroll if the node is already visible (parent is expanded)
+      selectedNodeRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
     }
-  }, [selectedPath, expandedPaths])
+  }, [selectedPath])
 
   const loadDirectory = async (path: string) => {
     try {
@@ -86,18 +79,10 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
 
       setTreeData(directoriesWithInfo)
 
-      // Load children for expanded directories
+      // Load children for already expanded directories
       for (const dir of directoriesWithInfo) {
         if (expandedPaths.has(dir.path)) {
-          // Check if this directory is part of the selected path
-          if (selectedPath && selectedPath.startsWith(dir.path)) {
-            // Load recursively if it's in the selected path
-            const hierarchy = getPathHierarchy(selectedPath)
-            await loadChildrenRecursive(dir.path, hierarchy)
-          } else {
-            // Normal load for other expanded directories
-            await loadChildren(dir.path)
-          }
+          await loadChildren(dir.path)
         }
       }
     } catch (error) {
@@ -125,14 +110,21 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
         return {
           path: dir.path,
           name: dir.name,
-          isExpanded: false,  // Don't auto-expand children when manually loading
+          isExpanded: expandedPaths.has(dir.path),  // Preserve expansion state
           isLoading: false,
           hasSubdirectories: hasSubdirs,
-          children: undefined,  // Children will be loaded when explicitly expanded
+          children: expandedPaths.has(dir.path) ? [] : undefined,  // Load children if already expanded
         }
       }))
 
       updateNodeChildren(path, directoriesWithInfo)
+      
+      // Load children for any already expanded subdirectories
+      for (const dir of directoriesWithInfo) {
+        if (expandedPaths.has(dir.path)) {
+          await loadChildren(dir.path)
+        }
+      }
     } catch (error) {
       console.error("Failed to load children:", error)
     }
@@ -155,106 +147,8 @@ export function DirectoryTree({ rootPath, selectedPath, onPathSelect }: Director
     })
   }
 
-  const getPathHierarchy = (targetPath: string): string[] => {
-    const hierarchy: string[] = []
-    const segments = targetPath.split(/[\\/]/).filter(Boolean)
-    
-    if (segments.length === 0) return hierarchy
-    
-    // Detect Windows path
-    const isWindowsPath = /^[A-Za-z]:?$/.test(segments[0])
-    
-    let currentPath = ""
-    for (let i = 0; i < segments.length; i++) {
-      if (i === 0) {
-        currentPath = segments[0] + (isWindowsPath ? "\\" : "")
-      } else {
-        currentPath = isWindowsPath 
-          ? currentPath + (currentPath.endsWith("\\") ? "" : "\\") + segments[i]
-          : currentPath + "/" + segments[i]
-      }
-      hierarchy.push(currentPath)
-    }
-    
-    return hierarchy
-  }
-
-  const expandToPath = async (targetPath: string) => {
-    // Get all parent paths that need to be expanded
-    const pathHierarchy = getPathHierarchy(targetPath)
-    
-    // Remove the last item if it's the target path itself (we don't expand the target, just its parents)
-    if (pathHierarchy.length > 0 && pathHierarchy[pathHierarchy.length - 1] === targetPath) {
-      pathHierarchy.pop()
-    }
-    
-    // Start from root and ensure it matches
-    if (!rootPath || !targetPath.startsWith(rootPath)) {
-      return
-    }
-    
-    const newExpanded = new Set(expandedPaths)
-    
-    // Expand each level sequentially
-    for (const pathToExpand of pathHierarchy) {
-      // Only expand paths that are under our root and not already expanded
-      if (pathToExpand.startsWith(rootPath) && !newExpanded.has(pathToExpand)) {
-        newExpanded.add(pathToExpand)
-      }
-    }
-    
-    // Update expanded paths state
-    setExpandedPaths(newExpanded)
-    
-    // Load children for newly expanded paths
-    for (const pathToExpand of pathHierarchy) {
-      if (pathToExpand.startsWith(rootPath) && !expandedPaths.has(pathToExpand)) {
-        await loadChildrenRecursive(pathToExpand, pathHierarchy)
-      }
-    }
-  }
-
-  const loadChildrenRecursive = async (path: string, fullHierarchy: string[]) => {
-    try {
-      const items = await window.electronAPI.fileSystem.readDirectory(path)
-      const directories = items
-        .filter((item) => item.isDirectory)
-      
-      // For each directory, check if it has subdirectories
-      const directoriesWithInfo = await Promise.all(directories.map(async (dir) => {
-        let hasSubdirs = false
-        try {
-          const subItems = await window.electronAPI.fileSystem.readDirectory(dir.path)
-          hasSubdirs = subItems.some(item => item.isDirectory)
-        } catch {
-          // If we can't read the directory, don't show expand chevron
-          hasSubdirs = false
-        }
-        
-        // Check if this directory is in our hierarchy and should be expanded
-        const shouldExpand = fullHierarchy.includes(dir.path)
-        return {
-          path: dir.path,
-          name: dir.name,
-          isExpanded: shouldExpand,
-          isLoading: false,
-          hasSubdirectories: hasSubdirs,
-          children: shouldExpand ? [] : undefined,
-        }
-      }))
-
-      updateNodeChildren(path, directoriesWithInfo)
-      
-      // Recursively load children for directories in the hierarchy
-      for (const dir of directoriesWithInfo) {
-        if (fullHierarchy.includes(dir.path)) {
-          await loadChildrenRecursive(dir.path, fullHierarchy)
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load children recursively:", error)
-    }
-  }
+  // Removed getPathHierarchy, expandToPath, and loadChildrenRecursive functions
+  // Directory tree now only expands when user manually clicks expand buttons
 
   const toggleExpand = async (node: TreeNode) => {
     const newExpanded = new Set(expandedPaths)

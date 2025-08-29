@@ -183,7 +183,7 @@ export function FilesList({
               <div
                 key={file.path}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center rounded-lg p-2",
+                  "flex cursor-pointer flex-col items-center rounded-lg p-2 select-none",
                   "hover:bg-muted",
                   isSelected && "bg-muted ring-2 ring-primary"
                 )}
@@ -251,7 +251,7 @@ export function FilesList({
               <div
                 key={file.path}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded px-2 py-1",
+                  "flex cursor-pointer items-center gap-2 rounded px-2 py-1 select-none",
                   "hover:bg-muted",
                   isSelected && "bg-muted ring-1 ring-primary"
                 )}
@@ -329,7 +329,7 @@ export function FilesList({
               <tr
                 key={file.path}
                 className={cn(
-                  "cursor-pointer border-b border-border",
+                  "cursor-pointer border-b border-border select-none",
                   "hover:bg-muted",
                   isSelected && "bg-muted"
                 )}
