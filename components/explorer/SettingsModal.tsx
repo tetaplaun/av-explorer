@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -10,15 +9,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Settings, Monitor, Calendar, FolderOpen, Sun, Moon, Laptop } from "lucide-react"
+import {
+  Settings,
+  Monitor,
+  Calendar,
+  FolderOpen,
+  Sun,
+  Moon,
+  Laptop,
+  Loader2,
+  AlertCircle,
+} from "lucide-react"
+import { useSettingsForm } from "@/hooks/useSettingsForm"
 import { useSettings } from "@/hooks/useSettings"
-import { ViewMode, Theme } from "@/types/explorer"
-import { useTheme } from "@/components/providers/ThemeProvider"
+import { ViewMode } from "@/types/explorer"
+import { ValidationError } from "@/lib/validation"
+import {
+  SettingSection,
+  SettingItem,
+  ToggleSetting,
+  NumberSetting,
+  SelectSetting,
+} from "@/components/ui/setting-section"
 
 interface SettingsModalProps {
   open: boolean
@@ -26,65 +39,33 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { settings, setSetting } = useSettings()
-  const { theme, setTheme } = useTheme()
+  const { settings } = useSettings()
+  const {
+    formData,
+    isDirty,
+    isSubmitting,
+    validationErrors,
+    isValid,
+    updateField,
+    resetForm,
+    saveChanges,
+    hasChanges,
+    validateForm,
+    clearValidationErrors,
+  } = useSettingsForm()
 
-  // Local state for form values
-  const [viewMode, setViewMode] = useState<ViewMode>("grid")
-  const [sidebarWidth, setSidebarWidth] = useState(250)
-  const [selectedTheme, setSelectedTheme] = useState<Theme>("dark")
-  const [dateSyncCreation, setDateSyncCreation] = useState(true)
-  const [dateSyncModified, setDateSyncModified] = useState(true)
-  const [dateDiffCreation, setDateDiffCreation] = useState(true)
-  const [dateDiffModified, setDateDiffModified] = useState(true)
-  const [dateDiffMaxDays, setDateDiffMaxDays] = useState(7)
-
-  // Load settings when modal opens
-  useEffect(() => {
-    if (open) {
-      setSelectedTheme(theme)
-      if (settings) {
-        setViewMode(settings.viewMode || "grid")
-        setSidebarWidth(settings.sidebarWidth || 250)
-        setDateSyncCreation(settings.dateSyncDefaults?.setCreationDate ?? true)
-        setDateSyncModified(settings.dateSyncDefaults?.setModifiedDate ?? true)
-        setDateDiffCreation(settings.dateDifferenceDefaults?.checkCreationDate ?? true)
-        setDateDiffModified(settings.dateDifferenceDefaults?.checkModifiedDate ?? true)
-        setDateDiffMaxDays(settings.dateDifferenceDefaults?.maxDifferenceInDays || 7)
-      }
+  const handleSave = async () => {
+    try {
+      await saveChanges()
+      onOpenChange(false)
+    } catch (error) {
+      // Error is already logged in the hook
+      // Could add toast notification here if desired
     }
-  }, [open, settings, theme])
-
-  const handleSave = () => {
-    // Save all settings
-    setTheme(selectedTheme)
-    setSetting("viewMode", viewMode)
-    setSetting("sidebarWidth", sidebarWidth)
-    setSetting("dateSyncDefaults", {
-      setCreationDate: dateSyncCreation,
-      setModifiedDate: dateSyncModified,
-    })
-    setSetting("dateDifferenceDefaults", {
-      checkCreationDate: dateDiffCreation,
-      checkModifiedDate: dateDiffModified,
-      maxDifferenceInDays: dateDiffMaxDays,
-    })
-
-    onOpenChange(false)
   }
 
   const handleCancel = () => {
-    // Reset to current settings
-    setSelectedTheme(theme)
-    if (settings) {
-      setViewMode(settings.viewMode || "grid")
-      setSidebarWidth(settings.sidebarWidth || 250)
-      setDateSyncCreation(settings.dateSyncDefaults?.setCreationDate ?? true)
-      setDateSyncModified(settings.dateSyncDefaults?.setModifiedDate ?? true)
-      setDateDiffCreation(settings.dateDifferenceDefaults?.checkCreationDate ?? true)
-      setDateDiffModified(settings.dateDifferenceDefaults?.checkModifiedDate ?? true)
-      setDateDiffMaxDays(settings.dateDifferenceDefaults?.maxDifferenceInDays || 7)
-    }
+    resetForm()
     onOpenChange(false)
   }
 
@@ -100,186 +81,118 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         </DialogHeader>
 
         <ScrollArea className="h-[400px] pr-6">
-          <div className="space-y-6">
+          <div className="space-y-6 pr-2">
             {/* View Preferences */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Monitor className="h-4 w-4" />
-                View Preferences
-              </h3>
+            <SettingSection title="View Preferences" icon={Monitor}>
+              <SelectSetting
+                label="Default View Mode"
+                value={formData.viewMode}
+                onChange={(value) => updateField("viewMode", value as ViewMode)}
+                options={[
+                  { value: "grid", label: "Grid" },
+                  { value: "list", label: "List" },
+                  { value: "details", label: "Details" },
+                ]}
+              />
 
-              <div className="space-y-3 pl-6 pr-6">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="viewMode">Default View Mode</Label>
-                  <select
-                    id="viewMode"
-                    value={viewMode}
-                    onChange={(e) => setViewMode(e.target.value as ViewMode)}
-                    className="w-32 h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="grid">Grid</option>
-                    <option value="list">List</option>
-                    <option value="details">Details</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="sidebarWidth">Sidebar Width (px)</Label>
-                  <Input
-                    id="sidebarWidth"
-                    type="number"
-                    min="150"
-                    max="500"
-                    value={sidebarWidth}
-                    onChange={(e) => setSidebarWidth(parseInt(e.target.value) || 250)}
-                    className="w-32"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
+              <NumberSetting
+                label="Sidebar Width (px)"
+                value={formData.sidebarWidth}
+                onChange={(value) => updateField("sidebarWidth", value)}
+                min={150}
+                max={500}
+              />
+            </SettingSection>
 
             {/* Theme Settings */}
-            <div className="space-y-4 pr-6">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Sun className="h-4 w-4" />
-                Appearance
-              </h3>
-
-              <div className="space-y-3 pl-6">
-                <div className="space-y-2">
-                  <Label>Theme</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={selectedTheme === "light" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedTheme("light")}
-                      className="flex items-center gap-2"
-                    >
-                      <Sun className="h-4 w-4" />
-                      Light
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={selectedTheme === "dark" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedTheme("dark")}
-                      className="flex items-center gap-2"
-                    >
-                      <Moon className="h-4 w-4" />
-                      Dark
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={selectedTheme === "system" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedTheme("system")}
-                      className="flex items-center gap-2"
-                    >
-                      <Laptop className="h-4 w-4" />
-                      System
-                    </Button>
-                  </div>
-                  {selectedTheme === "system" && (
-                    <p className="text-xs text-muted-foreground">
-                      Automatically switch between light and dark themes based on your system
-                      settings
-                    </p>
-                  )}
+            <SettingSection title="Appearance" icon={Sun}>
+              <SettingItem label="Theme">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.selectedTheme === "light" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => updateField("selectedTheme", "light")}
+                    className="flex items-center gap-2"
+                  >
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.selectedTheme === "dark" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => updateField("selectedTheme", "dark")}
+                    className="flex items-center gap-2"
+                  >
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.selectedTheme === "system" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => updateField("selectedTheme", "system")}
+                    className="flex items-center gap-2"
+                  >
+                    <Laptop className="h-4 w-4" />
+                    System
+                  </Button>
                 </div>
-              </div>
-            </div>
-
-            <Separator />
+              </SettingItem>
+              {formData.selectedTheme === "system" && (
+                <p className="text-xs text-muted-foreground ml-6">
+                  Automatically switch between light and dark themes based on your system settings
+                </p>
+              )}
+            </SettingSection>
 
             {/* Date Sync Defaults */}
-            <div className="space-y-4 pr-6">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Date Sync Defaults
-              </h3>
+            <SettingSection title="Date Sync Defaults" icon={Calendar}>
+              <ToggleSetting
+                label="Set Creation Date"
+                checked={formData.dateSyncCreation}
+                onCheckedChange={(checked) => updateField("dateSyncCreation", checked)}
+              />
 
-              <div className="space-y-3 pl-6">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dateSyncCreation">Set Creation Date</Label>
-                  <Switch
-                    id="dateSyncCreation"
-                    checked={dateSyncCreation}
-                    onCheckedChange={setDateSyncCreation}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dateSyncModified">Set Modified Date</Label>
-                  <Switch
-                    id="dateSyncModified"
-                    checked={dateSyncModified}
-                    onCheckedChange={setDateSyncModified}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
+              <ToggleSetting
+                label="Set Modified Date"
+                checked={formData.dateSyncModified}
+                onCheckedChange={(checked) => updateField("dateSyncModified", checked)}
+              />
+            </SettingSection>
 
             {/* Date Difference Defaults */}
-            <div className="space-y-4 pr-6">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Date Difference Selection Defaults
-              </h3>
+            <SettingSection title="Date Difference Selection Defaults" icon={Calendar}>
+              <ToggleSetting
+                label="Check Creation Date"
+                checked={formData.dateDiffCreation}
+                onCheckedChange={(checked) => updateField("dateDiffCreation", checked)}
+              />
 
-              <div className="space-y-3 pl-6">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dateDiffCreation">Check Creation Date</Label>
-                  <Switch
-                    id="dateDiffCreation"
-                    checked={dateDiffCreation}
-                    onCheckedChange={setDateDiffCreation}
-                  />
-                </div>
+              <ToggleSetting
+                label="Check Modified Date"
+                checked={formData.dateDiffModified}
+                onCheckedChange={(checked) => updateField("dateDiffModified", checked)}
+              />
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dateDiffModified">Check Modified Date</Label>
-                  <Switch
-                    id="dateDiffModified"
-                    checked={dateDiffModified}
-                    onCheckedChange={setDateDiffModified}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="dateDiffMaxDays">Max Difference (days)</Label>
-                  <Input
-                    id="dateDiffMaxDays"
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={dateDiffMaxDays}
-                    onChange={(e) => setDateDiffMaxDays(parseInt(e.target.value) || 7)}
-                    className="w-32"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
+              <NumberSetting
+                label="Max Difference (days)"
+                value={formData.dateDiffMaxDays}
+                onChange={(value) => updateField("dateDiffMaxDays", value)}
+                min={1}
+                max={365}
+              />
+            </SettingSection>
 
             {/* Current Session Info */}
-            <div className="space-y-4 pr-6">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <FolderOpen className="h-4 w-4" />
-                Current Session
-              </h3>
-
-              <div className="space-y-2 pl-6">
-                <div className="text-sm text-muted-foreground">
+            <SettingSection title="Current Session" icon={FolderOpen} showSeparator={false}>
+              <div className="text-sm text-muted-foreground">
+                <div>
                   <span className="font-medium">Last Path:</span> {settings?.lastPath || "Not set"}
                 </div>
                 {settings?.windowBounds && (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="mt-1">
                     <span className="font-medium">Window Size:</span> {settings.windowBounds.width}{" "}
                     × {settings.windowBounds.height}
                     {settings.windowBounds.x !== undefined &&
@@ -292,15 +205,43 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   </div>
                 )}
               </div>
-            </div>
+            </SettingSection>
           </div>
         </ScrollArea>
 
+        {/* Validation Errors */}
+        {validationErrors.length > 0 && (
+          <div className="px-6 pb-4">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <h4 className="text-sm font-medium text-destructive">Validation Errors</h4>
+              </div>
+              <ul className="text-sm text-destructive space-y-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>
+                    <span className="font-medium">{error.path}:</span> {error.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={!isDirty || isSubmitting || !isValid}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
