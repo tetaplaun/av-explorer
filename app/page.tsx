@@ -25,6 +25,12 @@ export default function Home() {
   const [dateSyncModalOpen, setDateSyncModalOpen] = useState(false)
   const [dateDifferenceModalOpen, setDateDifferenceModalOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [syncProgress, setSyncProgress] = useState({
+    isProcessing: false,
+    processedCount: 0,
+    successCount: 0,
+    failureCount: 0
+  })
 
   // Initialize with first drive on mount
   useEffect(() => {
@@ -177,36 +183,79 @@ export default function Home() {
 
     if (filesToSync.length === 0) return
 
+    // Reset and start progress
+    setSyncProgress({
+      isProcessing: true,
+      processedCount: 0,
+      successCount: 0,
+      failureCount: 0
+    })
+
     try {
-      const results = await window.electronAPI.fileSystem.setFileDates(filesToSync, options)
+      // Process files in batches to show progress
+      const batchSize = 5
+      let allResults: Array<{ path: string; success: boolean; error?: string }> = []
       
-      // Check results
-      const successCount = results.filter((r: { success: boolean }) => r.success).length
-      const failCount = results.filter((r: { success: boolean }) => !r.success).length
+      for (let i = 0; i < filesToSync.length; i += batchSize) {
+        const batch = filesToSync.slice(i, i + batchSize)
+        const batchResults = await window.electronAPI.fileSystem.setFileDates(batch, options)
+        allResults = [...allResults, ...batchResults]
+        
+        // Update progress
+        const processed = Math.min(i + batchSize, filesToSync.length)
+        const successSoFar = allResults.filter((r: { success: boolean }) => r.success).length
+        const failureSoFar = allResults.filter((r: { success: boolean }) => !r.success).length
+        
+        setSyncProgress({
+          isProcessing: true,
+          processedCount: processed,
+          successCount: successSoFar,
+          failureCount: failureSoFar
+        })
+        
+        // Small delay to show progress
+        if (i + batchSize < filesToSync.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      }
       
-      if (failCount > 0) {
-        const failures = results.filter((r: { success: boolean }) => !r.success)
-        console.error(`Failed to update ${failCount} files:`)
+      // Final results
+      const finalSuccess = allResults.filter((r: { success: boolean }) => r.success).length
+      const finalFailure = allResults.filter((r: { success: boolean }) => !r.success).length
+      
+      if (finalFailure > 0) {
+        const failures = allResults.filter((r: { success: boolean }) => !r.success)
+        console.error(`Failed to update ${finalFailure} files:`)
         failures.forEach((f: { path: string; error?: string }) => {
           console.error(`  - ${f.path}: ${f.error}`)
         })
       }
       
-      if (successCount > 0) {
-        console.log(`Successfully updated ${successCount} files`)
+      // Mark as complete
+      setSyncProgress({
+        isProcessing: true,
+        processedCount: filesToSync.length,
+        successCount: finalSuccess,
+        failureCount: finalFailure
+      })
+      
+      if (finalSuccess > 0) {
+        console.log(`Successfully updated ${finalSuccess} files`)
         // Save current selection
         const currentSelection = [...selectedFiles]
         
         // Force refresh the file list to show updated dates
-        setRefreshKey(prev => prev + 1)
-        
-        // Restore selection after component remounts
         setTimeout(() => {
-          setSelectedFiles(currentSelection)
-        }, 50)
+          setRefreshKey(prev => prev + 1)
+          // Restore selection after component remounts
+          setTimeout(() => {
+            setSelectedFiles(currentSelection)
+          }, 50)
+        }, 1000) // Wait a bit before refreshing
       }
     } catch (error) {
       console.error('Error syncing dates:', error)
+      setSyncProgress(prev => ({ ...prev, isProcessing: false }))
     }
   }
 
@@ -297,9 +346,24 @@ export default function Home() {
       {/* Date Sync Modal */}
       <DateSyncModal
         open={dateSyncModalOpen}
-        onOpenChange={setDateSyncModalOpen}
+        onOpenChange={(open) => {
+          setDateSyncModalOpen(open)
+          if (!open) {
+            // Reset progress when closing
+            setSyncProgress({
+              isProcessing: false,
+              processedCount: 0,
+              successCount: 0,
+              failureCount: 0
+            })
+          }
+        }}
         selectedCount={selectedFiles.length}
         onConfirm={handleSyncDates}
+        isProcessing={syncProgress.isProcessing}
+        processedCount={syncProgress.processedCount}
+        successCount={syncProgress.successCount}
+        failureCount={syncProgress.failureCount}
       />
       
       {/* Date Difference Modal */}
