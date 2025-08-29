@@ -38,11 +38,14 @@ export interface ExplorerState {
   sortOrder: 'asc' | 'desc'
 }
 
+export type Theme = 'light' | 'dark' | 'system'
+
 export interface AppSettings {
   viewMode: ViewMode
   lastPath: string
   windowBounds: { width: number; height: number; x?: number; y?: number }
   sidebarWidth: number
+  theme: Theme
   dateSyncDefaults: {
     setCreationDate: boolean
     setModifiedDate: boolean

@@ -15,9 +15,10 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Settings, Monitor, Calendar, FolderOpen } from "lucide-react"
+import { Settings, Monitor, Calendar, FolderOpen, Sun, Moon, Laptop } from "lucide-react"
 import { useSettings } from "@/hooks/useSettings"
-import { ViewMode } from "@/types/explorer"
+import { ViewMode, Theme } from "@/types/explorer"
+import { useTheme } from "@/components/providers/ThemeProvider"
 
 interface SettingsModalProps {
   open: boolean
@@ -26,10 +27,12 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { settings, setSetting } = useSettings()
+  const { theme, setTheme } = useTheme()
   
   // Local state for form values
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sidebarWidth, setSidebarWidth] = useState(250)
+  const [selectedTheme, setSelectedTheme] = useState<Theme>("dark")
   const [dateSyncCreation, setDateSyncCreation] = useState(true)
   const [dateSyncModified, setDateSyncModified] = useState(true)
   const [dateDiffCreation, setDateDiffCreation] = useState(true)
@@ -38,19 +41,23 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   
   // Load settings when modal opens
   useEffect(() => {
-    if (open && settings) {
-      setViewMode(settings.viewMode || "grid")
-      setSidebarWidth(settings.sidebarWidth || 250)
-      setDateSyncCreation(settings.dateSyncDefaults?.setCreationDate ?? true)
-      setDateSyncModified(settings.dateSyncDefaults?.setModifiedDate ?? true)
-      setDateDiffCreation(settings.dateDifferenceDefaults?.checkCreationDate ?? true)
-      setDateDiffModified(settings.dateDifferenceDefaults?.checkModifiedDate ?? true)
-      setDateDiffMaxDays(settings.dateDifferenceDefaults?.maxDifferenceInDays || 7)
+    if (open) {
+      setSelectedTheme(theme)
+      if (settings) {
+        setViewMode(settings.viewMode || "grid")
+        setSidebarWidth(settings.sidebarWidth || 250)
+        setDateSyncCreation(settings.dateSyncDefaults?.setCreationDate ?? true)
+        setDateSyncModified(settings.dateSyncDefaults?.setModifiedDate ?? true)
+        setDateDiffCreation(settings.dateDifferenceDefaults?.checkCreationDate ?? true)
+        setDateDiffModified(settings.dateDifferenceDefaults?.checkModifiedDate ?? true)
+        setDateDiffMaxDays(settings.dateDifferenceDefaults?.maxDifferenceInDays || 7)
+      }
     }
-  }, [open, settings])
+  }, [open, settings, theme])
   
   const handleSave = () => {
     // Save all settings
+    setTheme(selectedTheme)
     setSetting("viewMode", viewMode)
     setSetting("sidebarWidth", sidebarWidth)
     setSetting("dateSyncDefaults", {
@@ -68,6 +75,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   
   const handleCancel = () => {
     // Reset to current settings
+    setSelectedTheme(theme)
     if (settings) {
       setViewMode(settings.viewMode || "grid")
       setSidebarWidth(settings.sidebarWidth || 250)
@@ -128,6 +136,59 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     onChange={(e) => setSidebarWidth(parseInt(e.target.value) || 250)}
                     className="w-32"
                   />
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            {/* Theme Settings */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Sun className="h-4 w-4" />
+                Appearance
+              </h3>
+              
+              <div className="space-y-3 pl-6">
+                <div className="space-y-2">
+                  <Label>Theme</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={selectedTheme === 'light' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedTheme('light')}
+                      className="flex items-center gap-2"
+                    >
+                      <Sun className="h-4 w-4" />
+                      Light
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedTheme === 'dark' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedTheme('dark')}
+                      className="flex items-center gap-2"
+                    >
+                      <Moon className="h-4 w-4" />
+                      Dark
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={selectedTheme === 'system' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedTheme('system')}
+                      className="flex items-center gap-2"
+                    >
+                      <Laptop className="h-4 w-4" />
+                      System
+                    </Button>
+                  </div>
+                  {selectedTheme === 'system' && (
+                    <p className="text-xs text-muted-foreground">
+                      Automatically switch between light and dark themes based on your system settings
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
