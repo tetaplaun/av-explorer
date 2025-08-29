@@ -187,15 +187,19 @@ export function FilesList({
   }
 
   const handleSelectAll = () => {
-    if (selectedFiles.length === files.length) {
+    const selectableFiles = files.filter(f => f.name !== "..")
+    const allSelectablePaths = selectableFiles.map(f => f.path)
+    
+    // Check if all selectable files are currently selected
+    const allSelected = selectableFiles.length > 0 && 
+      selectableFiles.every(f => selectedFiles.includes(f.path))
+    
+    if (allSelected) {
       // If all selected, deselect all
       onSelectionChange([])
     } else {
       // Select all files (excluding ".." parent entry)
-      const allPaths = files
-        .filter(f => f.name !== "..")
-        .map(f => f.path)
-      onSelectionChange(allPaths)
+      onSelectionChange(allSelectablePaths)
     }
   }
 
