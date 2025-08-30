@@ -13,6 +13,7 @@ import { FilesList } from "@/components/explorer/FilesList"
 import { Toolbar } from "@/components/explorer/Toolbar"
 import { StatusBar } from "@/components/explorer/StatusBar"
 import { FileActionsBar } from "@/components/explorer/FileActionsBar"
+import { MenuBar } from "@/components/explorer/MenuBar"
 import { DateSyncModal } from "@/components/explorer/DateSyncModal"
 import { DateDifferenceModal } from "@/components/explorer/DateDifferenceModal"
 import { SettingsModal } from "@/components/explorer/SettingsModal"
@@ -376,6 +377,34 @@ function AppContent() {
   return (
     <>
       <div className="flex h-screen flex-col bg-background text-foreground">
+        {/* Menu Bar */}
+        <MenuBar
+          currentPath={currentPath}
+          onNavigate={navigateToPath}
+          canGoBack={historyIndex > 0}
+          canGoForward={historyIndex < history.length - 1}
+          onBack={goBack}
+          onForward={goForward}
+          onUp={goUp}
+          onRefresh={refresh}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          onSearch={handleSearch}
+          onClearSearch={handleClearSearch}
+          isMultiSelectMode={isMultiSelectMode}
+          selectedCount={selectedFiles.length}
+          hasFilesWithEncodedDates={hasFilesWithEncodedDates()}
+          onMultiSelectToggle={() => {
+            setIsMultiSelectMode(!isMultiSelectMode)
+            if (isMultiSelectMode) {
+              setSelectedFiles([])
+            }
+          }}
+          onSyncDates={() => setDateSyncModalOpen(true)}
+          onSelectDateDifferences={() => setDateDifferenceModalOpen(true)}
+          onSettingsClick={() => setSettingsModalOpen(true)}
+        />
+
         {/* Toolbar */}
         <Toolbar
           currentPath={currentPath}

@@ -2,16 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { 
-  ListChecks, 
-  Copy, 
-  Scissors, 
-  Clipboard, 
+import {
+  ListChecks,
+  Copy,
+  Scissors,
+  Clipboard,
   Trash2,
   FolderInput,
   FileEdit,
   CalendarClock,
-  CalendarSearch
+  CalendarSearch,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -43,7 +43,7 @@ export function FileActionsBar({
   onRename,
   onMove,
   onSyncDates,
-  onSelectDateDifferences
+  onSelectDateDifferences,
 }: FileActionsBarProps) {
   const hasSelection = selectedCount > 0
   const singleSelection = selectedCount === 1
@@ -59,10 +59,7 @@ export function FileActionsBar({
                 variant={isMultiSelectMode ? "secondary" : "ghost"}
                 size="sm"
                 onClick={onMultiSelectToggle}
-                className={cn(
-                  "h-8 px-2",
-                  isMultiSelectMode && "bg-primary/10 hover:bg-primary/20"
-                )}
+                className={cn("h-8 px-2", isMultiSelectMode && "bg-primary/10 hover:bg-primary/20")}
               >
                 <ListChecks className="h-4 w-4" />
               </Button>
