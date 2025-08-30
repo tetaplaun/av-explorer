@@ -6,14 +6,14 @@ export interface FileItem {
   modified: Date | null
   created: Date | null
   extension: string
-  mediaType?: 'video' | 'audio' | 'image' | null
+  mediaType?: "video" | "audio" | "image" | null
   encodedDate?: Date | null
 }
 
 export interface DriveInfo {
   name: string
   path: string
-  type: 'drive'
+  type: "drive"
   freeSpace?: number
   totalSize?: number
 }
@@ -27,18 +27,18 @@ export interface PathInfo {
   error?: string
 }
 
-export type ViewMode = 'grid' | 'list' | 'details'
+export type ViewMode = "grid" | "list" | "details"
 
 export interface ExplorerState {
   currentPath: string
   selectedItems: string[]
   viewMode: ViewMode
   showHidden: boolean
-  sortBy: 'name' | 'size' | 'modified' | 'type'
-  sortOrder: 'asc' | 'desc'
+  sortBy: "name" | "size" | "modified" | "type"
+  sortOrder: "asc" | "desc"
 }
 
-export type Theme = 'light' | 'dark' | 'system'
+export type Theme = "light" | "dark" | "system"
 
 export interface AppSettings {
   viewMode: ViewMode
@@ -73,9 +73,13 @@ declare global {
         readDirectory: (path: string) => Promise<FileItem[]>
         getPathInfo: (path: string) => Promise<PathInfo>
         getEncodedDates: (fileItems: FileItem[]) => Promise<Record<string, Date>>
+        getEncodedDatesProgressive: (fileItems: FileItem[]) => Promise<Record<string, Date>>
         openFile: (path: string) => Promise<{ success: boolean; error?: string }>
         showItemInFolder: (path: string) => Promise<{ success: boolean; error?: string }>
-        setFileDates: (files: FileItem[], options: { setCreationDate: boolean; setModifiedDate: boolean }) => Promise<Array<{ path: string; success: boolean; error?: string }>>
+        setFileDates: (
+          files: FileItem[],
+          options: { setCreationDate: boolean; setModifiedDate: boolean }
+        ) => Promise<Array<{ path: string; success: boolean; error?: string }>>
       }
     }
   }

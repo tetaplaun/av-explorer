@@ -41,7 +41,7 @@ export function FilesList({
 }: FilesListProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [loadingEncodedDates, setLoadingEncodedDates] = useState(false)
+  const [loadingEncodedDates, setLoadingEncodedDates] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [shouldUpdateParent, setShouldUpdateParent] = useState(false)
 
@@ -149,30 +149,52 @@ export function FilesList({
 
     if (mediaFiles.length === 0) return
 
-    try {
-      setLoadingEncodedDates(true)
-      const encodedDates = await window.electronAPI.fileSystem.getEncodedDates(mediaFiles)
+    // Process files progressively in small batches
+    const batchSize = 3 // Load 3 files at a time for better progressive feel
+    for (let i = 0; i < mediaFiles.length; i += batchSize) {
+      const batch = mediaFiles.slice(i, i + batchSize)
 
-      // Update files with encoded dates
-      setFiles((prevFiles) =>
-        prevFiles.map((file) => {
-          const encodedDate = encodedDates[file.path]
-          if (encodedDate) {
-            return { ...file, encodedDate }
-          }
-          return file
+      // Mark files as loading
+      setLoadingEncodedDates((prev) => {
+        const newSet = new Set(prev)
+        batch.forEach((file) => newSet.add(file.path))
+        return newSet
+      })
+
+      try {
+        const encodedDates = await window.electronAPI.fileSystem.getEncodedDatesProgressive(batch)
+
+        // Update files with encoded dates
+        setFiles((prevFiles) =>
+          prevFiles.map((file) => {
+            const encodedDate = encodedDates[file.path]
+            if (encodedDate) {
+              return { ...file, encodedDate }
+            }
+            return file
+          })
+        )
+
+        // Mark that parent should be updated
+        if (onFilesUpdate) {
+          setShouldUpdateParent(true)
+        }
+      } catch (err) {
+        console.error("Failed to load encoded dates batch:", err)
+        // Don't show error to user, just silently fail for encoded dates
+      } finally {
+        // Remove loading state for this batch
+        setLoadingEncodedDates((prev) => {
+          const newSet = new Set(prev)
+          batch.forEach((file) => newSet.delete(file.path))
+          return newSet
         })
-      )
-
-      // Mark that parent should be updated
-      if (onFilesUpdate) {
-        setShouldUpdateParent(true)
       }
-    } catch (err) {
-      console.error("Failed to load encoded dates:", err)
-      // Don't show error to user, just silently fail for encoded dates
-    } finally {
-      setLoadingEncodedDates(false)
+
+      // Small delay between batches to make progressive loading more visible
+      if (i + batchSize < mediaFiles.length) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
     }
   }
 
@@ -529,10 +551,7 @@ export function FilesList({
                     "-"
                   ) : file.encodedDate ? (
                     formatDateTime(file.encodedDate)
-                  ) : loadingEncodedDates &&
-                    (file.mediaType === "video" ||
-                      file.mediaType === "audio" ||
-                      file.mediaType === "image") ? (
+                  ) : loadingEncodedDates.has(file.path) ? (
                     <span className="text-xs">Loading...</span>
                   ) : (
                     "-"
