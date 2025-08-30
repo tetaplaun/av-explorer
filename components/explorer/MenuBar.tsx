@@ -146,10 +146,11 @@ export function MenuBar({
   }) => (
     <button
       className={cn(
-        "flex w-full items-center gap-3 px-3 py-2 text-sm outline-none transition-colors",
-        "hover:bg-accent hover:text-accent-foreground",
-        disabled && "opacity-50 cursor-not-allowed",
-        destructive && "hover:bg-destructive/10 hover:text-destructive"
+        "flex w-full items-center gap-3 px-3 py-2 text-sm outline-none",
+        destructive
+          ? "hover:bg-destructive/10 hover:text-destructive"
+          : "hover:bg-accent hover:text-accent-foreground",
+        disabled && "opacity-50 cursor-not-allowed"
       )}
       onClick={() => !disabled && handleMenuItemClick(onClick)}
       disabled={disabled}
@@ -292,6 +293,37 @@ export function MenuBar({
           )}
         </div>
 
+        {/* Select Menu */}
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleMenu("select")}
+            className={cn("h-7 px-3 text-sm font-normal", openMenu === "select" && "bg-accent")}
+          >
+            <ListChecks className="h-4 w-4 mr-2" />
+            Select
+            <ChevronDown className="h-3 w-3 ml-1" />
+          </Button>
+
+          {openMenu === "select" && (
+            <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-md border border-border bg-popover p-1 shadow-lg">
+              <MenuItem
+                icon={ListChecks}
+                label={isMultiSelectMode ? "Exit Selection Mode" : "Enter Selection Mode"}
+                shortcut="Ctrl+A"
+                onClick={onMultiSelectToggle}
+              />
+              <MenuItem
+                icon={CalendarSearch}
+                label="Select Files with Date Differences"
+                disabled={!onSelectDateDifferences}
+                onClick={() => onSelectDateDifferences?.()}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Tools Menu */}
         <div className="relative">
           <Button
@@ -307,22 +339,6 @@ export function MenuBar({
 
           {openMenu === "tools" && (
             <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-md border border-border bg-popover p-1 shadow-lg">
-              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground">Selection</div>
-              <MenuItem
-                icon={ListChecks}
-                label={isMultiSelectMode ? "Exit Selection Mode" : "Enter Selection Mode"}
-                shortcut="Ctrl+A"
-                onClick={onMultiSelectToggle}
-              />
-              <MenuItem
-                icon={CalendarSearch}
-                label="Select Files with Date Differences"
-                disabled={!onSelectDateDifferences}
-                onClick={() => onSelectDateDifferences?.()}
-              />
-
-              <Separator className="my-1" />
-
               <div className="px-3 py-2 text-xs font-semibold text-muted-foreground">
                 Date Operations
               </div>
