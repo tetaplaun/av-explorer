@@ -144,6 +144,8 @@ export function NumberSetting({
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value) || 0)}
         disabled={disabled}
+        autoFocus={false}
+        tabIndex={-1}
         className={cn("w-24", inputClassName)}
       />
     </SettingItem>
@@ -178,6 +180,8 @@ export function SelectSetting({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        autoFocus={false}
+        tabIndex={-1}
         className={cn(
           "w-32 h-9 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           selectClassName
