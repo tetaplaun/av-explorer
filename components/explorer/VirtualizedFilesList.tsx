@@ -28,6 +28,7 @@ interface VirtualizedFilesListProps {
   searchQuery?: string
   height?: number
   itemHeight?: number
+  loadingEncodedDates?: boolean
 }
 
 export function VirtualizedFilesList({
@@ -43,6 +44,7 @@ export function VirtualizedFilesList({
   searchQuery,
   height = 600,
   itemHeight = 40,
+  loadingEncodedDates = false,
 }: VirtualizedFilesListProps) {
   // Filter files based on search query
   const filteredFiles = useMemo(() => {
@@ -368,8 +370,13 @@ export function VirtualizedFilesList({
                     "-"
                   ) : file.encodedDate ? (
                     formatDateTime(file.encodedDate)
-                  ) : (
+                  ) : loadingEncodedDates &&
+                    (file.mediaType === "video" ||
+                      file.mediaType === "audio" ||
+                      file.mediaType === "image") ? (
                     <span className="text-xs">Loading...</span>
+                  ) : (
+                    "-"
                   )}
                 </td>
               </tr>

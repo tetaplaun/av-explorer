@@ -263,6 +263,7 @@ export function FilesList({
         onFilesUpdate={onFilesUpdate}
         searchQuery={searchQuery}
         height={600}
+        loadingEncodedDates={loadingEncodedDates}
       />
     )
   }
