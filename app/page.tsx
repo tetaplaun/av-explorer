@@ -41,6 +41,7 @@ function AppContent() {
     successCount: 0,
     failureCount: 0,
   })
+  const [syncTotal, setSyncTotal] = useState(0)
 
   // Initialize with settings when loaded
   useEffect(() => {
@@ -216,6 +217,14 @@ function AppContent() {
     })
   }
 
+  // Number of files that will actually be processed (have encoded dates)
+  const eligibleSyncCount = selectedFiles
+    .map((filePath) => files.find((f) => f.path === filePath))
+    .filter(
+      (file): file is FileItem =>
+        file !== undefined && file.encodedDate !== null && file.encodedDate !== undefined
+    ).length
+
   const handleSelectDateDifferences = (options: {
     checkCreationDate: boolean
     checkModifiedDate: boolean
@@ -274,7 +283,19 @@ function AppContent() {
           file !== undefined && file.encodedDate !== null && file.encodedDate !== undefined
       )
 
-    if (filesToSync.length === 0) return
+    // Freeze total for progress display
+    setSyncTotal(filesToSync.length)
+
+    if (filesToSync.length === 0) {
+      // Ensure we don't show stale progress for zero-eligible runs
+      setSyncProgress({
+        isProcessing: false,
+        processedCount: 0,
+        successCount: 0,
+        failureCount: 0,
+      })
+      return
+    }
 
     // Reset and start progress
     setSyncProgress({
@@ -453,9 +474,10 @@ function AppContent() {
                 successCount: 0,
                 failureCount: 0,
               })
+              setSyncTotal(0)
             }
           }}
-          selectedCount={selectedFiles.length}
+          selectedCount={syncProgress.isProcessing ? syncTotal : eligibleSyncCount}
           onConfirm={handleSyncDates}
           isProcessing={syncProgress.isProcessing}
           processedCount={syncProgress.processedCount}

@@ -38,7 +38,7 @@ export function DateSyncModal({
   const { settings } = useSettings()
   const [setCreationDate, setSetCreationDate] = useState(true)
   const [setModifiedDate, setSetModifiedDate] = useState(true)
-  
+
   // Load defaults from settings when modal opens
   useEffect(() => {
     if (open && settings?.dateSyncDefaults) {
@@ -46,14 +46,14 @@ export function DateSyncModal({
       setSetModifiedDate(settings.dateSyncDefaults.setModifiedDate)
     }
   }, [open, settings])
-  
-  const isComplete = isProcessing && processedCount === selectedCount
+
+  const isComplete = isProcessing && selectedCount > 0 && processedCount >= selectedCount
 
   const handleConfirm = () => {
     if (!setCreationDate && !setModifiedDate) {
       return // Nothing to do
     }
-    
+
     onConfirm({ setCreationDate, setModifiedDate })
     // Don't close modal - let parent handle it after processing
   }
@@ -64,7 +64,7 @@ export function DateSyncModal({
     setSetCreationDate(true)
     setSetModifiedDate(true)
   }
-  
+
   const handleClose = () => {
     onOpenChange(false)
     // Reset for next time
@@ -84,7 +84,7 @@ export function DateSyncModal({
                 ) : (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 )}
-                {isComplete ? 'Date Sync Complete' : 'Syncing File Dates...'}
+                {isComplete ? "Date Sync Complete" : "Syncing File Dates..."}
               </>
             ) : (
               <>
@@ -94,15 +94,14 @@ export function DateSyncModal({
             )}
           </DialogTitle>
           <DialogDescription>
-            {isProcessing 
-              ? isComplete 
-                ? 'File dates have been updated.' 
+            {isProcessing
+              ? isComplete
+                ? "File dates have been updated."
                 : `Processing ${processedCount} of ${selectedCount} files...`
-              : 'Set file system dates to match the encoded date from media metadata.'
-            }
+              : "Set file system dates to match the encoded date from media metadata."}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           {isProcessing ? (
             <>
@@ -110,16 +109,20 @@ export function DateSyncModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span>Progress</span>
-                  <span className="font-medium">{Math.round((processedCount / selectedCount) * 100)}%</span>
+                  <span className="font-medium">
+                    {selectedCount === 0 ? 0 : Math.round((processedCount / selectedCount) * 100)}%
+                  </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${(processedCount / selectedCount) * 100}%` }}
+                    style={{
+                      width: `${selectedCount === 0 ? 0 : (processedCount / selectedCount) * 100}%`,
+                    }}
                   />
                 </div>
               </div>
-              
+
               {/* Status Summary */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2 rounded-lg bg-green-500/10 px-3 py-2">
@@ -137,12 +140,14 @@ export function DateSyncModal({
                   </div>
                 </div>
               </div>
-              
+
               {isComplete && failureCount > 0 && (
                 <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3">
                   <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
                   <div className="text-xs text-muted-foreground">
-                    <p className="font-medium text-amber-600 dark:text-amber-400">Some files failed</p>
+                    <p className="font-medium text-amber-600 dark:text-amber-400">
+                      Some files failed
+                    </p>
                     <p>Check the console for details about failed files.</p>
                   </div>
                 </div>
@@ -152,53 +157,50 @@ export function DateSyncModal({
             <>
               <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
                 <span className="text-sm font-medium">
-                  {selectedCount} {selectedCount === 1 ? 'file' : 'files'} selected
+                  {selectedCount} {selectedCount === 1 ? "file" : "files"} selected
                 </span>
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     checked={setCreationDate}
                     onCheckedChange={(checked) => setSetCreationDate(checked as boolean)}
                   />
-                  <label
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Set Creation Date
                   </label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     checked={setModifiedDate}
                     onCheckedChange={(checked) => setSetModifiedDate(checked as boolean)}
                   />
-                  <label
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Set Modified Date
                   </label>
                 </div>
               </div>
-              
+
               <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3">
                 <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
                 <div className="text-xs text-muted-foreground">
                   <p className="font-medium text-amber-600 dark:text-amber-400">Warning</p>
-                  <p>This action will permanently modify the file system dates. This operation cannot be undone.</p>
+                  <p>
+                    This action will permanently modify the file system dates. This operation cannot
+                    be undone.
+                  </p>
                 </div>
               </div>
             </>
           )}
         </div>
-        
+
         <DialogFooter>
           {isProcessing ? (
             isComplete ? (
-              <Button onClick={handleClose}>
-                Close
-              </Button>
+              <Button onClick={handleClose}>Close</Button>
             ) : (
               <Button disabled variant="ghost">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -210,10 +212,7 @@ export function DateSyncModal({
               <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleConfirm}
-                disabled={!setCreationDate && !setModifiedDate}
-              >
+              <Button onClick={handleConfirm} disabled={!setCreationDate && !setModifiedDate}>
                 Apply Changes
               </Button>
             </>
